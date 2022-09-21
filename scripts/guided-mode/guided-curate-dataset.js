@@ -3740,9 +3740,6 @@ const attachGuidedMethodsToSodaJSONObj = () => {
           poolName
         ]?.["folders"]?.[subjectName]
       ) {
-        console.log(
-          `Copying ${subjectName} from ${poolName} to ${highLevelFolder}`
-        );
         datasetStructureJSONObj["folders"][highLevelFolder]["folders"][
           subjectName
         ] =
@@ -9605,7 +9602,6 @@ $(document).ready(async () => {
         console.error(error);
         //Clear the interval to stop the generation of new sweet alerts after intitial error
         clearInterval(timerProgress);
-        console.log("error getting upload progress");
         throw emessage;
       }
 
