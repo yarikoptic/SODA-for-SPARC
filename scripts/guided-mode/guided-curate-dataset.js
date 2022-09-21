@@ -825,9 +825,9 @@ document
     try {
       //Delete any manifest files that already exist in the sodaJSONObj
       //because new manifest files will be generated after the user leaves this page
-      for (const [highLevelFolder, folderData] of Object.entries(
-        sodaJSONObj["saved-datset-structure-json-obj"]["folders"]
-      )) {
+      for (const highLevelFolder in sodaJSONObj[
+        "saved-datset-structure-json-obj"
+      ]["folders"]) {
         delete sodaJSONObj["saved-datset-structure-json-obj"]["folders"][
           highLevelFolder
         ]["files"]["manifest.xlsx"];
@@ -840,7 +840,6 @@ document
         `/curate_datasets/guided_generate_high_level_folder_manifest_data`,
         {
           dataset_structure_obj: sodaJSONObj["saved-datset-structure-json-obj"],
-          existing_manifest_data: sodaJSONObj["guided-manifest-files"],
         },
         { timeout: 0 }
       );
