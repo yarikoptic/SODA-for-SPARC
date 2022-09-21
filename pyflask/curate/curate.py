@@ -3304,7 +3304,7 @@ def generate_manifest_file_locally(generate_purpose, soda_json_structure):
 
 
 
-def guided_generate_manifest_file_data(dataset_structure_obj):
+def guided_generate_manifest_file_data(dataset_structure_obj, existing_manifest_data):
 
     local_timezone = TZLOCAL()
 
@@ -3388,18 +3388,18 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
 
     # Loop through each high level folder and create a manifest data array for each.
     for high_level_folder in list(dataset_structure_obj["folders"]):
+        existing_high_level_folder_data = existing_manifest_data[high_level_folder]
         hlf_data_array = []
 
         # create an array to keep track of the path to the obj being recursed over
         relative_structure_path = [high_level_folder]
 
-        hlf_data_array.append([
-        "filename",
-        "file type",
-        "timestamp",
-        "description",
-        "Additional Metadata",
-        ])
+        # if existing_high_level_folder_data is not empty, add the headers property as the hlf_data_array
+        if existing_high_level_folder_data["headers"]:
+            hlf_data_array.append(existing_high_level_folder_data["headers"])
+        else:
+            hlf_data_array.append(["filename","file type","timestamp","description","Additional Metadata",])
+            
         guided_recursive_folder_traversal(dataset_structure_obj["folders"][high_level_folder], hlf_data_array, relative_structure_path)
         hlf_manifest_data[high_level_folder] = hlf_data_array
 

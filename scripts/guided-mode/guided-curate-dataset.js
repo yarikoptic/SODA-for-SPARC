@@ -817,67 +817,65 @@ document
   .addEventListener("click", async () => {
     const manifestData = sodaJSONObj["guided-manifest-files"];
 
-    //If no manifest file exists, generate the manifest file data
-    if (Object.keys(manifestData).length === 0) {
-      const manifestFilesCardsContainer = document.getElementById(
-        "guided-container-manifest-file-cards"
-      );
+    const manifestFilesCardsContainer = document.getElementById(
+      "guided-container-manifest-file-cards"
+    );
 
-      manifestFilesCardsContainer.innerHTML = `loading`;
-      try {
-        //Delete any manifest files that already exist in the sodaJSONObj
-        //because new manifest files will be generated after the user leaves this page
-        for (const [highLevelFolder, folderData] of Object.entries(
-          sodaJSONObj["saved-datset-structure-json-obj"]["folders"]
-        )) {
-          delete sodaJSONObj["saved-datset-structure-json-obj"]["folders"][
-            highLevelFolder
-          ]["files"]["manifest.xlsx"];
-        }
-        // Generate the manifest file data for each high level folder
-        // Data will be returned as an object with a key for each high level folder
-        // and the value for each key will be an array of arrays with the first array
-        // being the headers, and the rest of the arrays being the manifest data.
-        const res = await client.post(
-          `/curate_datasets/guided_generate_high_level_folder_manifest_data`,
-          {
-            dataset_structure_obj:
-              sodaJSONObj["saved-datset-structure-json-obj"],
-          },
-          { timeout: 0 }
-        );
-        const manifestRes = res.data;
-        //loop through each of the high level folders and store their manifest headers and data
-        //into the sodaJSONObj
-
-        for (const [highLevelFolderName, manifestFileData] of Object.entries(
-          manifestRes
-        )) {
-          //Only save manifest files for hlf that returned more than the headers
-          //(meaning manifest file data was generated in the response)
-          if (manifestFileData.length > 1) {
-            //Remove the first element from the array and set it as the headers
-            const manifestHeader = manifestFileData.shift();
-            const manifestData = manifestFileData;
-
-            sodaJSONObj["guided-manifest-files"][highLevelFolderName] = {
-              headers: manifestHeader,
-              data: manifestData,
-            };
-            datasetStructureJSONObj["folders"][highLevelFolderName]["files"][
-              "manifest.xlsx"
-            ] = {
-              name: "manifest.xlsx",
-              size: 0,
-              type: "temp",
-            };
-          }
-        }
-        //Save the sodaJSONObj with the new manifest files
-        saveGuidedProgress(sodaJSONObj["digital-metadata"]["name"]);
-      } catch (err) {
-        userError(err);
+    manifestFilesCardsContainer.innerHTML = `loading`;
+    try {
+      //Delete any manifest files that already exist in the sodaJSONObj
+      //because new manifest files will be generated after the user leaves this page
+      for (const [highLevelFolder, folderData] of Object.entries(
+        sodaJSONObj["saved-datset-structure-json-obj"]["folders"]
+      )) {
+        delete sodaJSONObj["saved-datset-structure-json-obj"]["folders"][
+          highLevelFolder
+        ]["files"]["manifest.xlsx"];
       }
+      // Generate the manifest file data for each high level folder
+      // Data will be returned as an object with a key for each high level folder
+      // and the value for each key will be an array of arrays with the first array
+      // being the headers, and the rest of the arrays being the manifest data.
+      const res = await client.post(
+        `/curate_datasets/guided_generate_high_level_folder_manifest_data`,
+        {
+          dataset_structure_obj: sodaJSONObj["saved-datset-structure-json-obj"],
+          existing_manifest_data: sodaJSONObj["guided-manifest-files"],
+        },
+        { timeout: 0 }
+      );
+      const manifestRes = res.data;
+      console.log(manifestRes);
+      //loop through each of the high level folders and store their manifest headers and data
+      //into the sodaJSONObj
+
+      for (const [highLevelFolderName, manifestFileData] of Object.entries(
+        manifestRes
+      )) {
+        //Only save manifest files for hlf that returned more than the headers
+        //(meaning manifest file data was generated in the response)
+        if (manifestFileData.length > 1) {
+          //Remove the first element from the array and set it as the headers
+          const manifestHeader = manifestFileData.shift();
+          const manifestData = manifestFileData;
+
+          sodaJSONObj["guided-manifest-files"][highLevelFolderName] = {
+            headers: manifestHeader,
+            data: manifestData,
+          };
+          datasetStructureJSONObj["folders"][highLevelFolderName]["files"][
+            "manifest.xlsx"
+          ] = {
+            name: "manifest.xlsx",
+            size: 0,
+            type: "temp",
+          };
+        }
+      }
+      //Save the sodaJSONObj with the new manifest files
+      saveGuidedProgress(sodaJSONObj["digital-metadata"]["name"]);
+    } catch (err) {
+      userError(err);
     }
 
     //Rerender the manifest cards
@@ -904,42 +902,6 @@ setActiveProgressionTab = (targetPageID) => {
   );
   let targetProgressionTab = $(`#${targetProgressionTabID}`);
   targetProgressionTab.addClass("selected-tab");
-};
-const handlePageBranching = (selectedCardElement) => {
-  //hide capsule containers for page branches that are not selected
-  const capsuleContainerID = selectedCardElement
-    .attr("id")
-    .replace("card", "branch-capsule-container");
-  $(".guided--capsule-container-branch").hide();
-  $(`#${capsuleContainerID}`).css("display", "flex");
-
-  //handle skip pages following card
-  if (selectedCardElement.data("branch-pages-group-class")) {
-    const branchPagesGroupClass = selectedCardElement.attr(
-      "data-branch-pages-group-class"
-    );
-    $(`.${branchPagesGroupClass}`).attr("data-skip-page", "true");
-    const pageBranchToRemoveSkip = selectedCardElement
-      .attr("id")
-      .replace("card", "branch-page");
-    $(`.${pageBranchToRemoveSkip}`).attr("data-skip-page", "false");
-  }
-
-  selectedCardElement.siblings().removeClass("checked");
-  selectedCardElement.siblings().addClass("non-selected");
-  selectedCardElement.removeClass("non-selected");
-  selectedCardElement.addClass("checked");
-
-  const tabPanelId = selectedCardElement.attr("id").replace("card", "panel");
-  const tabPanel = $(`#${tabPanelId}`);
-  //checks to see if clicked card has a panel, if so, hides siblings and smooth scrolls to it
-  if (tabPanel.length != 0) {
-    tabPanel.siblings().hide();
-    tabPanel.css("display", "flex");
-    tabPanel[0].scrollIntoView({
-      behavior: "smooth",
-    });
-  }
 };
 
 const guidedResetProgressVariables = () => {
@@ -7836,12 +7798,6 @@ $(document).ready(async () => {
       document.getElementById("guided-dataset-subtitle-input"),
       guidedDatasetSubtitleCharCount
     );
-  });
-
-  //card click hanndler that displays the card's panel using the card's id prefix
-  //e.g. clicking a card with id "foo-bar-card" will display the panel with the id "foo-bar-panel"
-  $(".guided--card-container > div").on("click", function () {
-    handlePageBranching($(this));
   });
 
   document

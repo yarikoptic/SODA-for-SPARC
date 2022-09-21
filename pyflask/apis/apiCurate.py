@@ -193,14 +193,16 @@ class GenerateManifestLocally(Resource):
 class GenerateManifestData(Resource):
     parser = reqparse.RequestParser()
     parser.add_argument('dataset_structure_obj', type=dict, required=True, help='dataset structure used to generate manifest files for each high level folder', location='json')
+    parser.add_argument('existing_manifest_data', type=dict, required=False, help='Existing manifest data to diff check against', location='json')
     @api.doc(responses={500: 'There was an internal server error', 400: 'Bad Request'}, description="Generate Manifest Data for each of the high level folders. Returns an array of arrays to be inserted into jspreadsheet.")
     @api.expect(parser)
     def post(self):
 
         data = self.parser.parse_args()
         dataset_structure_obj = data.get("dataset_structure_obj")
+        existing_manifest_data = data.get("existing_manifest_data")
         try:
-            return guided_generate_manifest_file_data(dataset_structure_obj)
+            return guided_generate_manifest_file_data(dataset_structure_obj, existing_manifest_data)
         except Exception as e:
             api.abort(500, str(e))
 
