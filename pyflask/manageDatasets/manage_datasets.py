@@ -1125,7 +1125,7 @@ def submit_dataset_progress():
         'total_file_size': total_file_size,
         'upload_file_size': uploaded_file_size,
         'elapsed_time_formatted': elapsed_time_formatted,
-    }
+    }    
 
 
 def bf_get_users(selected_bfaccount):
@@ -1898,6 +1898,47 @@ def bf_add_license(selected_bfaccount, selected_bfdataset, selected_license):
     except Exception as e:
         raise Exception(e) from e
     return {"message": "License added!"}
+
+
+
+
+
+def bf_reserve_doi(selected_bfaccount, selected_bfdataset):
+    """
+    Function to reserve a DOI for a selected dataset
+
+    Args:
+        selected_bfaccount: name of selected Pennsieve acccount (string)
+        selected_bfdataset: name of selected Pennsieve dataset (string)
+    Return:
+        Success message or error
+    """
+
+    try:
+        bf = Pennsieve(selected_bfaccount)
+    except Exception as e:
+        error_message = "Please select a valid Pennsieve account"
+        abort(400, error_message)
+
+    try:
+        myds = bf.get_dataset(selected_bfdataset)
+    except Exception as e:
+        error_message = "Please select a valid Pennsieve dataset"
+        abort(400, error_message)
+
+
+    role = bf_get_current_user_permission(bf, myds)
+    if role not in ["owner", "manager"]:
+        error_message = "You don't have permissions for editing metadata on this Pennsieve dataset"
+        abort(403, error_message)
+
+
+    try:
+        selected_dataset_id = myds.id
+        bf._api.datasets._post(f"/{str(selected_dataset_id)}/doi")
+        return {"message": "DOI reserved!"}
+    except Exception as e:
+        raise Exception(e)
 
 
 
