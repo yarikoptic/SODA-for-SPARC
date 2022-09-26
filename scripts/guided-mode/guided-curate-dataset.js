@@ -5444,6 +5444,8 @@ const openCopySubjectMetadataPopup = async () => {
   `;
   swal
     .fire({
+      heightAuto: false,
+      backdrop: "rgba(0,0,0, 0.4)",
       width: 950,
       html: copyMetadataElement,
       showCancelButton: true,
@@ -5539,7 +5541,9 @@ const openCopySampleMetadataPopup = async () => {
   `;
 
   swal
-    .fire({
+    .fire({\
+      heightAuto: false,
+      backdrop: "rgba(0,0,0, 0.4)",
       width: 950,
       html: copyMetadataElement,
       showCancelButton: true,
