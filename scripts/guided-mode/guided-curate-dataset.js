@@ -3647,18 +3647,18 @@ const openPage = async (targetPageID) => {
           } else {
             sparcAwardInputManual.value = sparcAwardRes;
           }
+
+          // Add tagify elements for all milestones1
           if (pennsieveMileStones) {
-            guidedSubmissionTagsTagifyManual.addTags(pennsieveMileStones);
+            sodaJSONObj["dataset-metadata"]["submission-metadata"]["milestones"] =
+              pennsieveMileStones;
           }
 
           // It's possible that pennsieveCompletionDate can be an empty string if the user Selects N/A.
           // If an empty string was pulled from Pennsieve, select the input with value "" which is N/A.
-          if (pennsieveCompletionDate === "") {
-            completionDateInputManual.value = "";
-          } else if (pennsieveCompletionDate) {
-            completionDateInputManual.innerHTML += `<option value="${completionDate}">${completionDate}</option>`;
-            //select the completion date that was added
-            completionDateInputManual.value = completionDate;
+          if (pennsieveCompletionDate) {
+            sodaJSONObj["dataset-metadata"]["submission-metadata"]["completion-date"] =
+              pennsieveCompletionDate;
           }
         } catch (error) {
           console.log(error);
@@ -3798,7 +3798,6 @@ const openPage = async (targetPageID) => {
               file_type: "dataset_description.xlsx",
             },
           });
-          console.log(metadata_import.data);
           let relatedInformationData = metadata_import.data["Related information"];
           const protocolsFromPennsieve = relatedInformationData.filter(
             (relatedInformationArray) => {
@@ -4197,7 +4196,6 @@ const openPage = async (targetPageID) => {
           console.log(sparcUsers[5]);
           console.log(sparcUsers[9]);
 
-          console.log(removeSpacesFromString(sparcUsers[5]));
           const sparcTeams = sparcTeamsReq.data.teams;
           console.log(sparcUsers);
           console.log(sparcTeams);
@@ -11404,8 +11402,12 @@ $(document).ready(async () => {
         };
       });
 
+      // Combine the dataset additional Links as well as the protocols
+
       const guidedAdditionalLinks =
         sodaJSONObj["dataset-metadata"]["description-metadata"]["additional-links"];
+      const guidedProtocols = sodaJSONObj["dataset-metadata"]["description-metadata"]["protocols"];
+      const allDatasetLinks = [...guidedAdditionalLinks, ...guidedProtocols];
 
       //README and CHANGES Metadata variables
       const guidedReadMeMetadata = sodaJSONObj["dataset-metadata"]["README"];
@@ -11489,7 +11491,7 @@ $(document).ready(async () => {
         guidedDatasetInformation,
         guidedStudyInformation,
         guidedContributorInformation,
-        guidedAdditionalLinks
+        allDatasetLinks
       );
 
       let readMeMetadataRes = await guidedUploadREADMEorCHANGESMetadata(
