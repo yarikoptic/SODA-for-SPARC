@@ -2,6 +2,25 @@ const folderImportedFromPennsieve = (folderJSONPath) => {
   return folderJSONPath.type === "bf";
 };
 
+const addPennsievePulledSubjectToList = (subjectName) => {
+  if (sodaJSONObj["dataset-metadata"]["subjects-pulled-from-pennsieve"].includes(subjectName)) {
+    return;
+  }
+  sodaJSONObj["dataset-metadata"]["subjects-pulled-from-pennsieve"].push(subjectName);
+};
+const addPennsievePulledSampleToList = (sampleName) => {
+  if (sodaJSONObj["dataset-metadata"]["samples-pulled-from-pennsieve"].includes(sampleName)) {
+    return;
+  }
+  sodaJSONObj["dataset-metadata"]["samples-pulled-from-pennsieve"].push(sampleName);
+};
+const addPennsievePulledPoolToList = (poolName) => {
+  if (sodaJSONObj["dataset-metadata"]["pools-pulled-from-pennsieve"].includes(poolName)) {
+    return;
+  }
+  sodaJSONObj["dataset-metadata"]["pools-pulled-from-pennsieve"].push(poolName);
+};
+
 const guidedModifyPennsieveFolder = (folderJSONPath, action) => {
   //Actions can be "delete"  or "restore"
   if (!folderJSONPath) {
@@ -219,8 +238,10 @@ const savePageChanges = async (pageBeingLeftID) => {
             await extractPoolSubSamStructureFromMetadata();
           console.log(datasetSubjectsMetadata, datasetSamplesMetadata, metadataSubSamStructure);
 
-          const datasetSubSamStructure =
-            extractPoolSubSamStructureFromDataset(datasetStructureJSONObj);
+          const datasetSubSamStructure = extractPoolSubSamStructureFromDataset(
+            datasetStructureJSONObj,
+            "pennsieve"
+          );
 
           if (datasetSubjectsMetadata && datasetSamplesMetadata) {
             if (!objectsHaveSameKeys(metadataSubSamStructure, datasetSubSamStructure)) {
@@ -1440,7 +1461,7 @@ const extractPoolSubSamStructureFromMetadata = async () => {
 // and adds the pools, subjects, and samples to the guided mode structure if they exist.
 // This function also handles setting the button config options, for example, if the function
 // detects that there's primary subject data in the dataset, the yes button will be selected.
-const extractPoolSubSamStructureFromDataset = (datasetStructure) => {
+const extractPoolSubSamStructureFromDataset = (datasetStructure, structureSource) => {
   const guidedFoldersInDataset = guidedHighLevelFolders.filter((folder) =>
     Object.keys(datasetStructure["folders"]).includes(folder)
   );
@@ -1466,6 +1487,7 @@ const extractPoolSubSamStructureFromDataset = (datasetStructure) => {
       if (!addedSubjects.includes(subjectFolder)) {
         try {
           sodaJSONObj.addSubject(subjectFolder);
+          addPennsievePulledSubjectToList(subjectFolder);
           addedSubjects.push(subjectFolder);
         } catch (error) {
           console.log(error);
@@ -1488,6 +1510,7 @@ const extractPoolSubSamStructureFromDataset = (datasetStructure) => {
         if (!addedSamples.includes(sampleFolder)) {
           try {
             sodaJSONObj.addSampleToSubject(sampleFolder, null, subjectFolder);
+            addPennsievePulledSampleToList(sampleFolder);
             addedSamples.push(sampleFolder);
           } catch (error) {
             console.log(error);
@@ -1507,6 +1530,7 @@ const extractPoolSubSamStructureFromDataset = (datasetStructure) => {
       if (!addedPools.includes(poolFolder)) {
         try {
           sodaJSONObj.addPool(poolFolder);
+          addPennsievePulledPoolToList(poolFolder);
           addedPools.push(poolFolder);
         } catch (error) {
           console.log(error);
@@ -1529,6 +1553,8 @@ const extractPoolSubSamStructureFromDataset = (datasetStructure) => {
         // been added from another hlf
         try {
           sodaJSONObj.addSubject(subjectFolder);
+          addPennsievePulledSubjectToList(subjectFolder);
+          addedSubjects.push(subjectFolder);
         } catch (error) {
           console.log(error);
         }
@@ -1556,6 +1582,8 @@ const extractPoolSubSamStructureFromDataset = (datasetStructure) => {
           //from another hlf
           try {
             sodaJSONObj.addSampleToSubject(sampleFolder, poolFolder, subjectFolder);
+            addPennsievePulledSampleToList(sampleFolder);
+            addedSamples.push(sampleFolder);
           } catch (error) {
             console.log(error);
           }
@@ -5775,6 +5803,9 @@ guidedCreateSodaJSONObj = () => {
   sodaJSONObj["dataset-metadata"]["pool-subject-sample-structure"] = {};
   sodaJSONObj["dataset-metadata"]["pool-subject-sample-structure"]["pools"] = {};
   sodaJSONObj["dataset-metadata"]["pool-subject-sample-structure"]["subjects"] = {};
+  sodaJSONObj["dataset-metadata"]["subjects-pulled-from-pennsieve"] = [];
+  sodaJSONObj["dataset-metadata"]["samples-pulled-from-pennsieve"] = [];
+  sodaJSONObj["dataset-metadata"]["pools-pulled-from-pennsieve"] = [];
   sodaJSONObj["dataset-metadata"]["subject-metadata"] = {};
   sodaJSONObj["dataset-metadata"]["sample-metadata"] = {};
   sodaJSONObj["dataset-metadata"]["submission-metadata"] = {};
@@ -8683,7 +8714,7 @@ const updateGuidedTableIndices = (tableIndexClass) => {
   });
 };
 
-const generateSubjectRowElement = (subjectName) => {
+const generateSubjectRowElement = (subjectName, pendingPennsieveDeletion = false) => {
   return `
     <tr>
       <td class="middle aligned subject-id-cell">
