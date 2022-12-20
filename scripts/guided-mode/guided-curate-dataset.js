@@ -20,6 +20,15 @@ const addPennsievePulledPoolToList = (poolName) => {
   }
   sodaJSONObj["dataset-metadata"]["pools-pulled-from-pennsieve"].push(poolName);
 };
+const subjectWasPulledFromPennsieve = (subjectName) => {
+  return sodaJSONObj["dataset-metadata"]["subjects-pulled-from-pennsieve"].includes(subjectName);
+};
+const sampleWasPulledFromPennsieve = (sampleName) => {
+  return sodaJSONObj["dataset-metadata"]["samples-pulled-from-pennsieve"].includes(sampleName);
+};
+const poolWasPulledFromPennsieve = (poolName) => {
+  return sodaJSONObj["dataset-metadata"]["pools-pulled-from-pennsieve"].includes(poolName);
+};
 
 const guidedModifyPennsieveFolder = (folderJSONPath, action) => {
   //Actions can be "delete"  or "restore"
@@ -5014,6 +5023,21 @@ const openPage = async (targetPageID) => {
   guidedSetNavLoadingState(false);
 };
 
+const renderSubjectsTable = () => {
+  const [subjectsInPools, subjectsOutsidePools] = sodaJSONObj.getAllSubjects();
+  //Combine sample data from subjects in and out of pools
+  let subjects = [...subjectsInPools, ...subjectsOutsidePools];
+  const subjectElementRows = subjects
+    .map((subject) => {
+      // Returns true if the source of the subject is Pennsieve
+      const subjectWasPulledFromPennsieve = subjectWasPulledFromPennsieve(subject);
+      console.log(subjectWasPulledFromPennsieve);
+      return generateSubjectRowElement(subject.subjectName, subjectWasPulledFromPennsieve);
+    })
+    .join("\n");
+  document.getElementById("subject-specification-table-body").innerHTML = subjectElementRows;
+};
+
 const setActiveSubPage = (pageIdToActivate) => {
   console.log(pageIdToActivate);
   const pageElementToActivate = document.getElementById(pageIdToActivate);
@@ -5022,15 +5046,7 @@ const setActiveSubPage = (pageIdToActivate) => {
   //depending on page being opened
   switch (pageIdToActivate) {
     case "guided-specify-subjects-page": {
-      const [subjectsInPools, subjectsOutsidePools] = sodaJSONObj.getAllSubjects();
-      //Combine sample data from subjects in and out of pools
-      let subjects = [...subjectsInPools, ...subjectsOutsidePools];
-      const subjectElementRows = subjects
-        .map((subject) => {
-          return generateSubjectRowElement(subject.subjectName);
-        })
-        .join("\n");
-      document.getElementById("subject-specification-table-body").innerHTML = subjectElementRows;
+      renderSubjectsTable();
       //remove the add subject help text
       document.getElementById("guided-add-subject-instructions").classList.add("hidden");
       break;
@@ -5948,7 +5964,7 @@ const attachGuidedMethodsToSodaJSONObj = () => {
       }
     }
   };
-  sodaJSONObj.deleteSubject = function (subjectName) {
+  sodaJSONObj.deleteSubject = function (subjectName, subjectWasPulledFromPennsieve) {
     const [subjectsInPools, subjectsOutsidePools] = this.getAllSubjects();
     const subjects = [...subjectsInPools, ...subjectsOutsidePools];
     for (const subject of subjects) {
@@ -5966,7 +5982,11 @@ const attachGuidedMethodsToSodaJSONObj = () => {
                 subject.poolName
               ]?.["folders"]?.[subjectName]
             ) {
-              k, m;
+              console.log(
+                datasetStructureJSONObj?.["folders"]?.[highLevelFolder]?.["folders"]?.[
+                  subject.poolName
+                ]?.["folders"]?.[subjectName]
+              );
               delete datasetStructureJSONObj["folders"][highLevelFolder]["folders"][
                 subject.poolName
               ]["folders"][subjectName];
@@ -9092,18 +9112,19 @@ const addPoolTableRow = () => {
 };
 
 //deletes subject from jsonObj and UI
-const deleteSubject = (subjectDeleteButton) => {
+const deleteSubject = (subjectDeleteButton, pulledFromPennsieve) => {
   const subjectIdCellToDelete = subjectDeleteButton.closest("tr");
   const subjectIdToDelete = subjectIdCellToDelete.find(".subject-id").text();
 
   //Check to see if a subject has been added to the element
   //if it has, delete the subject from the pool-sub-sam structure
   if (subjectIdToDelete) {
-    sodaJSONObj.deleteSubject(subjectIdToDelete);
+    sodaJSONObj.deleteSubject(subjectIdToDelete, pulledFromPennsieve);
   }
 
-  //delete the table row element in the UI
-  subjectIdCellToDelete.remove();
+  //Re-render the subjets table
+  renderSubjectsTable();
+
   //remove the add subject help text
   document.getElementById("guided-add-subject-instructions").classList.add("hidden");
 };
