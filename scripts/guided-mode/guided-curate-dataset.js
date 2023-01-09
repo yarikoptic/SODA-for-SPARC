@@ -2543,6 +2543,8 @@ const guidedOpenManifestEditSwal = async (highLevelFolderName) => {
 const extractFilNamesFromManifestData = (manifestData) => {
   let allFileNamesinDsStructure = [];
   for (const highLevelFolder of Object.keys(manifestData)) {
+    console.log(manifestData[highLevelFolder]);
+    if (manifestData[highLevelFolder] === "generate-dataset") continue;
     for (const row of manifestData[highLevelFolder]["data"]) {
       allFileNamesinDsStructure.push(row[0]);
     }
@@ -2554,12 +2556,13 @@ const diffCheckManifestFiles = (newManifestData, existingManifestData) => {
   const prevManifestFileNames = extractFilNamesFromManifestData(existingManifestData);
   const newManifestFileNames = extractFilNamesFromManifestData(newManifestData);
 
-  if (JSON.stringify(prevManifestFileNames) === JSON.stringify(newManifestFileNames)) {
+  if (JSON.stringify(existingManifestData) === JSON.stringify(newManifestData)) {
     //All files have remained the same, no need to diff check
+    console.log("are the same");
     return existingManifestData;
   }
 
-  const numImmutableManifestDataCols = 3;
+  const numImmutableManifestDataCols = 2;
 
   // Create a hash table for the existing manifest data
   const existingManifestDataHashTable = {};
@@ -2579,7 +2582,6 @@ const diffCheckManifestFiles = (newManifestData, existingManifestData) => {
       existingManifestDataHashTable[fileName] = fileObj;
     }
   }
-
   let returnObj = {};
 
   for (const highLevelFolder of Object.keys(newManifestData)) {
@@ -2611,10 +2613,10 @@ const diffCheckManifestFiles = (newManifestData, existingManifestData) => {
           newManifestReturnObj["data"].push(row);
         }
         returnObj[highLevelFolder] = newManifestReturnObj;
+        console.log(returnObj[highLevelFolder]);
       }
     }
   }
-
   return returnObj;
 };
 
@@ -12200,7 +12202,6 @@ $(document).ready(async () => {
         app.quit();
       });
 
-
     const guidedUpdateUploadStatus = async () => {
       let mainCurationProgressResponse;
       try {
@@ -12223,7 +12224,7 @@ $(document).ready(async () => {
       main_total_generate_dataset_size = data["main_total_generate_dataset_size"];
       const main_generated_dataset_size = data["main_generated_dataset_size"];
       const elapsed_time_formatted = data["elapsed_time_formatted"];
-      const totalUploadedFiles = data["total_files_uploaded"]
+      const totalUploadedFiles = data["total_files_uploaded"];
 
       if (start_generate === 1) {
         $("#guided-progress-bar-new-curate").css("display", "block");

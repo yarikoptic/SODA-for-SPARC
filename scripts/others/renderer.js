@@ -78,8 +78,6 @@ let introStatus = {
   samples: false,
 };
 
-
-
 //////////////////////////////////
 // App launch actions
 //////////////////////////////////
@@ -1126,6 +1124,8 @@ const manifestStatus = document.querySelector("#generate-manifest");
 // Manage datasets //
 var myitem;
 var datasetList = [];
+var sodaCopy = {};
+var datasetStructCopy = {};
 const bfUploadRefreshDatasetBtn = document.getElementById("button-upload-refresh-dataset-list");
 
 const pathSubmitDataset = document.querySelector("#selected-local-dataset-submit");
@@ -7118,83 +7118,7 @@ const divGenerateProgressBar = document.getElementById("div-new-curate-meter-pro
 const generateProgressBar = document.getElementById("progress-bar-new-curate");
 var progressStatus = document.getElementById("para-new-curate-progress-bar-status");
 
-document.getElementById("button-generate").addEventListener("click", async function () {
-  $($($(this).parent()[0]).parents()[0]).removeClass("tab-active");
-  document.getElementById("para-new-curate-progress-bar-error-status").innerHTML = "";
-  document.getElementById("para-please-wait-new-curate").innerHTML = "";
-  document.getElementById("prevBtn").style.display = "none";
-  document.getElementById("start-over-btn").style.display = "none";
-  document.getElementById("div-vertical-progress-bar").style.display = "none";
-  document.getElementById("div-generate-comeback").style.display = "none";
-  document.getElementById("generate-dataset-progress-tab").style.display = "flex";
-  $("#sidebarCollapse").prop("disabled", false);
-
-  // updateJSON structure after Generate dataset tab
-  updateJSONStructureGenerate();
-  if (sodaJSONObj["starting-point"]["type"] === "local") {
-    sodaJSONObj["starting-point"]["type"] = "new";
-  }
-
-  let dataset_name = "";
-  let dataset_destination = "";
-
-  if ("bf-dataset-selected" in sodaJSONObj) {
-    dataset_name = sodaJSONObj["bf-dataset-selected"]["dataset-name"];
-    dataset_destination = "Pennsieve";
-  } else if ("generate-dataset" in sodaJSONObj) {
-    if ("destination" in sodaJSONObj["generate-dataset"]) {
-      let destination = sodaJSONObj["generate-dataset"]["destination"];
-      if (destination == "local") {
-        dataset_name = sodaJSONObj["generate-dataset"]["dataset-name"];
-        dataset_destination = "Local";
-      }
-      if (destination == "bf") {
-        dataset_name = sodaJSONObj["generate-dataset"]["dataset-name"];
-        dataset_destination = "Pennsieve";
-      }
-    }
-  }
-
-  generateProgressBar.value = 0;
-
-  progressStatus.innerHTML = "Please wait while we verify a few things...";
-
-  statusText = "Please wait while we verify a few things...";
-  if (dataset_destination == "Pennsieve") {
-    /// TODO: Uncomment this
-    // let supplementary_checks = await run_pre_flight_checks(false);
-    // if (!supplementary_checks) {
-    //   $("#sidebarCollapse").prop("disabled", false);
-    //   return;
-    // }
-  }
-
-  // from here you can modify
-  document.getElementById("para-please-wait-new-curate").innerHTML = "Please wait...";
-  document.getElementById("para-new-curate-progress-bar-error-status").innerHTML = "";
-  progressStatus.innerHTML = "";
-  document.getElementById("div-new-curate-progress").style.display = "none";
-
-  progressBarNewCurate.value = 0;
-
-  // delete datasetStructureObject["files"] value (with metadata files (if any)) that was added only for the Preview tree view
-  if ("files" in sodaJSONObj["dataset-structure"]) {
-    sodaJSONObj["dataset-structure"]["files"] = {};
-  }
-  // delete manifest files added for treeview
-  for (var highLevelFol in sodaJSONObj["dataset-structure"]["folders"]) {
-    if (
-      "manifest.xlsx" in sodaJSONObj["dataset-structure"]["folders"][highLevelFol]["files"] &&
-      sodaJSONObj["dataset-structure"]["folders"][highLevelFol]["files"]["manifest.xlsx"][
-        "forTreeview"
-      ]
-    ) {
-      delete sodaJSONObj["dataset-structure"]["folders"][highLevelFol]["files"]["manifest.xlsx"];
-    }
-  }
-
-  console.log("Checking empty files and folders");
-
+const checkEmptyFilesAndFolders = async (sodaJSONObj) => {
   let emptyFilesFoldersResponse;
   try {
     emptyFilesFoldersResponse = await client.post(
@@ -7218,7 +7142,6 @@ document.getElementById("button-generate").addEventListener("click", async funct
 
   let { data } = emptyFilesFoldersResponse;
 
-  document.getElementById("para-please-wait-new-curate").innerHTML = "Please wait...";
   log.info("Continue with curate");
   let errorMessage = "";
   error_files = data["empty_files"];
@@ -7234,6 +7157,102 @@ document.getElementById("button-generate").addEventListener("click", async funct
     var error_message_folders = backend_to_frontend_warning_message(error_folders);
     errorMessage += error_message_folders;
   }
+
+  return errorMessage;
+};
+
+const setSodaJSONStartingPoint = (sodaJSONObj) => {
+  if (sodaJSONObj["starting-point"]["type"] === "local") {
+    sodaJSONObj["starting-point"]["type"] = "new";
+  }
+};
+
+const setDatasetNameAndDestination = (sodaJSONObj) => {
+  let dataset_name = "";
+  let dataset_destination = "";
+
+  if ("bf-dataset-selected" in sodaJSONObj) {
+    dataset_name = sodaJSONObj["bf-dataset-selected"]["dataset-name"];
+    dataset_destination = "Pennsieve";
+  } else if ("generate-dataset" in sodaJSONObj) {
+    if ("destination" in sodaJSONObj["generate-dataset"]) {
+      let destination = sodaJSONObj["generate-dataset"]["destination"];
+      if (destination == "local") {
+        dataset_name = sodaJSONObj["generate-dataset"]["dataset-name"];
+        dataset_destination = "Local";
+      }
+      if (destination == "bf") {
+        dataset_name = sodaJSONObj["generate-dataset"]["dataset-name"];
+        dataset_destination = "Pennsieve";
+      }
+    }
+  }
+
+  return [dataset_name, dataset_destination];
+};
+
+const deleteTreeviewFiles = (sodaJSONObj) => {
+  // delete datasetStructureObject["files"] value (with metadata files (if any)) that was added only for the Preview tree view
+  if ("files" in sodaJSONObj["dataset-structure"]) {
+    sodaJSONObj["dataset-structure"]["files"] = {};
+  }
+  // delete manifest files added for treeview
+  for (var highLevelFol in sodaJSONObj["dataset-structure"]["folders"]) {
+    if (
+      "manifest.xlsx" in sodaJSONObj["dataset-structure"]["folders"][highLevelFol]["files"] &&
+      sodaJSONObj["dataset-structure"]["folders"][highLevelFol]["files"]["manifest.xlsx"][
+        "forTreeview"
+      ]
+    ) {
+      delete sodaJSONObj["dataset-structure"]["folders"][highLevelFol]["files"]["manifest.xlsx"];
+    }
+  }
+};
+
+document.getElementById("button-generate").addEventListener("click", async function () {
+  $($($(this).parent()[0]).parents()[0]).removeClass("tab-active");
+  document.getElementById("para-new-curate-progress-bar-error-status").innerHTML = "";
+  document.getElementById("para-please-wait-new-curate").innerHTML = "";
+  document.getElementById("prevBtn").style.display = "none";
+  document.getElementById("start-over-btn").style.display = "none";
+  document.getElementById("div-vertical-progress-bar").style.display = "none";
+  document.getElementById("div-generate-comeback").style.display = "none";
+  document.getElementById("generate-dataset-progress-tab").style.display = "flex";
+  $("#sidebarCollapse").prop("disabled", false);
+
+  // updateJSON structure after Generate dataset tab
+  updateJSONStructureGenerate(false, sodaJSONObj);
+
+  setSodaJSONStartingPoint(sodaJSONObj);
+
+  let [dataset_name, dataset_destination] = setDatasetNameAndDestination(sodaJSONObj);
+
+  generateProgressBar.value = 0;
+
+  progressStatus.innerHTML = "Please wait while we verify a few things...";
+
+  statusText = "Please wait while we verify a few things...";
+  if (dataset_destination == "Pennsieve") {
+    /// TODO: Uncomment this
+    // let supplementary_checks = await run_pre_flight_checks(false);
+    // if (!supplementary_checks) {
+    //   $("#sidebarCollapse").prop("disabled", false);
+    //   return;
+    // }
+  }
+
+  // from here you can modify
+  document.getElementById("para-please-wait-new-curate").innerHTML = "Please wait...";
+  document.getElementById("para-new-curate-progress-bar-error-status").innerHTML = "";
+  progressStatus.innerHTML = "";
+  document.getElementById("div-new-curate-progress").style.display = "none";
+
+  progressBarNewCurate.value = 0;
+
+  deleteTreeviewFiles(sodaJSONObj);
+
+  document.getElementById("para-please-wait-new-curate").innerHTML = "Please wait...";
+  let errorMessage = await checkEmptyFilesAndFolders(sodaJSONObj);
 
   if (errorMessage) {
     errorMessage += "Would you like to continue?";
@@ -7300,9 +7319,6 @@ var uploadComplete = new Notyf({
     },
   ],
 });
-
-//const remote = require("electron").remote;
-//child.setPosition(position[0], position[1]);
 
 // Generates a dataset organized in the Organize Dataset feature locally, or on Pennsieve
 async function initiate_generate() {
@@ -7382,6 +7398,9 @@ async function initiate_generate() {
         manifest_files_requested = true;
         delete_imported_manifest();
       }
+      if (sodaJSONObj["manifest-files"]["destination"] === "auto-generated") {
+        delete_imported_manifest();
+      }
     }
   }
   let dataset_destination = "";
@@ -7401,6 +7420,8 @@ async function initiate_generate() {
   dataset_name = nameDestinationPair[0];
   dataset_destination = nameDestinationPair[1];
 
+  console.log("BEFORE CURATION");
+  console.log(JSON.stringify(sodaJSONObj));
   client
     .post(
       `/curate_datasets/curation`,
@@ -9159,3 +9180,135 @@ tippy("#datasetPathDisplay", {
   theme: "soda",
   maxWidth: "100%",
 });
+
+// function that removes hidden class from js element by id and smooth scrolls to it
+const unHideAndSmoothScrollToElement = (id) => {
+  elementToUnhideAndScrollTo = document.getElementById(id);
+  elementToUnhideAndScrollTo.classList.remove("hidden");
+  elementToUnhideAndScrollTo.scrollIntoView({
+    behavior: "smooth",
+  });
+};
+
+const smoothScrollToElement = (idOrElement) => {
+  //check if idOrElement is an element
+  if (typeof idOrElement === "string") {
+    elementToScrollTo = document.getElementById(id);
+    elementToScrollTo.scrollIntoView({
+      behavior: "smooth",
+    });
+  } else {
+    idOrElement.scrollIntoView({
+      behavior: "smooth",
+    });
+  }
+};
+
+const convertJSONToXlsx = (jsondata, excelfile) => {
+  console.log(excelfile);
+  console.log("creating new manifest files styled");
+  const requiredManifestHeaders = ["filename", "timestamp", "description", "file type"];
+  const wb = new excel4node.Workbook();
+  // create wb style that makes the background red
+  const requiredHeaderStyle = wb.createStyle({
+    fill: {
+      type: "pattern",
+      patternType: "solid",
+      fgColor: "a8d08d",
+    },
+    font: {
+      bold: true,
+      color: "#000000",
+      size: 12,
+      name: "Calibri",
+    },
+    border: {
+      left: {
+        style: "thin",
+        color: "#000000",
+      },
+      right: {
+        style: "thin",
+        color: "#000000",
+      },
+      top: {
+        style: "thin",
+        color: "#000000",
+      },
+      bottom: {
+        style: "thin",
+        color: "#000000",
+      },
+    },
+  });
+  const optionalHeaderStyle = wb.createStyle({
+    fill: {
+      type: "pattern",
+      patternType: "solid",
+      fgColor: "ffd965",
+    },
+    font: {
+      bold: true,
+      color: "#000000",
+      size: 12,
+      name: "Calibri",
+    },
+    border: {
+      left: {
+        style: "thin",
+        color: "#000000",
+      },
+      right: {
+        style: "thin",
+        color: "#000000",
+      },
+      top: {
+        style: "thin",
+        color: "#000000",
+      },
+      bottom: {
+        style: "thin",
+        color: "#000000",
+      },
+    },
+  });
+  const standardCellStyle = wb.createStyle({
+    font: {
+      bold: false,
+      color: "#000000",
+      size: 12,
+      name: "Calibri",
+    },
+  });
+
+  const wsOptions = {
+    sheetFormat: {
+      defaultColWidth: 20,
+    },
+  };
+  const ws = wb.addWorksheet("Sheet1", wsOptions);
+  const headingColumnNames = Object.keys(jsondata[0]);
+  //Write Column Title in Excel file
+  let headingColumnIndex = 1;
+  headingColumnNames.forEach((heading) => {
+    let styleObject = requiredManifestHeaders.includes(heading)
+      ? requiredHeaderStyle
+      : optionalHeaderStyle;
+
+    ws.cell(1, headingColumnIndex++)
+      .string(heading)
+      .style(styleObject);
+  });
+  //Write Data in Excel file
+  let rowIndex = 2;
+  jsondata.forEach((record) => {
+    let columnIndex = 1;
+    Object.keys(record).forEach((columnName) => {
+      ws.cell(rowIndex, columnIndex++)
+        .string(record[columnName])
+        .style(standardCellStyle);
+    });
+    rowIndex++;
+  });
+  wb.write(excelfile);
+};

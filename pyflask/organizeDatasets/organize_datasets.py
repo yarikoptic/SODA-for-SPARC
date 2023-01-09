@@ -3,6 +3,7 @@ from turtle import pensize
 from flask import abort
 import platform
 import os
+import itertools
 from os import makedirs, mkdir, walk
 from os.path import (
     isdir,
@@ -25,6 +26,7 @@ import requests
 from permissions import bf_get_current_user_permission_agent_two, has_edit_permissions
 from utils import connect_pennsieve_client, get_dataset_id, create_request_headers, authenticate_user_with_client
 from namespaces import NamespaceEnum, get_namespace_logger
+import json
 namespace_logger = get_namespace_logger(NamespaceEnum.ORGANIZE_DATASETS)
 from authentication import get_access_token
 
@@ -904,7 +906,6 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
         else:
             return file_name + ("." + extension)
 
-    
 
     def createFolderStructure(subfolder_json, pennsieve_client_or_token, manifest):
         """
@@ -952,6 +953,8 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                         "bfpath": [],
                         "timestamp": formatted_timestamp,
                         "type": "bf",
+                        "additional-metadata": "",
+                        "description": "",
                     }
                     for paths in subfolder_json["bfpath"]:
                         subfolder_json["files"][item_name]["bfpath"].append(paths)
@@ -972,6 +975,12 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                     else:
                         temp_name = item_name
                     if len(manifest.keys()) > 0:
+                        extra_columns = False
+                        if len(manifest.keys()) > 5:
+                            # extra columns are in the manifest
+                            # if length of keys is greater than 5 than extra custom columns were made
+                            extra_columns = True
+                            extra_columns_dict = dict(itertools.islice(manifest.items(), 5, len(manifest)))
                         if "filename" in manifest:
                             if temp_name in manifest["filename"].values():
                                 location_index = list(manifest["filename"].values()).index(
@@ -987,6 +996,12 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                                     ] = manifest["Additional Metadata"][location_index]
                                 if manifest["file type"][location_index] != "":
                                         subfolder_json["files"][item_name]["file type"] = manifest["file type"][location_index]
+                                if extra_columns:
+                                    subfolder_json["files"][item_name]["extra_columns"] = {}
+                                    starting_manifest_index = 5
+                                    for index in extra_columns_dict.keys():
+                                        subfolder_json["files"][item_name]["extra_columns"][index] = (manifest[index][location_index])
+                                        starting_manifest_index += 1
                         elif "File Name" in manifest:
                             if temp_name in manifest["File Name"].values():
                                 location_index = list(manifest["File Name"].values()).index(
@@ -1002,6 +1017,9 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                                     ] = manifest["Additional Metadata"][location_index]
                                 if manifest["file type"][location_index] != "":
                                         subfolder_json["files"][item_name]["file type"] = manifest["file type"][location_index]
+                            # extra columns are in the manifest
+
+
             else:  # another subfolder found
                 subfolder_json["folders"][item_name] = {
                     "action": ["existing"],
@@ -1146,6 +1164,7 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                             else:
                                 df = pd.read_csv(manifest_url)
                                 df = df.fillna("")
+                            # 
                             manifest_dict[folder].update(df.to_dict())
                         except Exception as e:
                             manifest_error_message.append(
@@ -1164,6 +1183,8 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
         "Data files under a valid high-level SPARC folders have been imported"
     )
     create_soda_json_completed = 1
+
+    
     return {
         "soda_object": soda_json_structure,
         "success_message": success_message,

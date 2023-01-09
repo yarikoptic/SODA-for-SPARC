@@ -77,7 +77,6 @@ start_submit = 0
 metadatapath = join(userpath, "SODA", "SODA_metadata")
 
 total_bytes_uploaded = {}
-
 bf = ""
 myds = ""
 initial_bfdataset_size = 0
