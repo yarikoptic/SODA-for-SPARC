@@ -2440,7 +2440,7 @@ const renderProgressCards = (progressFileJSONdata) => {
 };
 
 const renderManifestCards = () => {
-  const guidedManifestData = sodaJSONObj["guided-manifest-files"];
+  const guidedManifestData = sodaJSONObj["manifest-files"];
   const highLevelFoldersWithManifestData = Object.keys(guidedManifestData);
 
   const manifestCards = highLevelFoldersWithManifestData
@@ -2486,7 +2486,7 @@ const generateManifestEditCard = (highLevelFolderName) => {
 };
 
 const guidedOpenManifestEditSwal = async (highLevelFolderName) => {
-  const existingManifestData = sodaJSONObj["guided-manifest-files"][highLevelFolderName];
+  const existingManifestData = sodaJSONObj["manifest-files"][highLevelFolderName];
 
   let manifestFileHeaders = existingManifestData["headers"];
   let manifestFileData = existingManifestData["data"];
@@ -2530,7 +2530,7 @@ const guidedOpenManifestEditSwal = async (highLevelFolderName) => {
     const savedHeaders = guidedManifestTable.getHeaders().split(",");
     const savedData = guidedManifestTable.getData();
 
-    sodaJSONObj["guided-manifest-files"][highLevelFolderName] = {
+    sodaJSONObj["manifest-files"][highLevelFolderName] = {
       headers: savedHeaders,
       data: savedData,
     };
@@ -2675,7 +2675,7 @@ document
           };
         }
       }
-      const existingManifestData = sodaJSONObj["guided-manifest-files"];
+      const existingManifestData = sodaJSONObj["manifest-files"];
       let updatedManifestData;
 
       if (existingManifestData) {
@@ -2684,7 +2684,7 @@ document
         updatedManifestData = newManifestData;
       }
 
-      sodaJSONObj["guided-manifest-files"] = updatedManifestData;
+      sodaJSONObj["manifest-files"] = updatedManifestData;
       // Save the sodaJSONObj with the new manifest files
       saveGuidedProgress(sodaJSONObj["digital-metadata"]["name"]);
     } catch (err) {
@@ -2901,7 +2901,7 @@ function guidedShowTreePreview(new_dataset_name, targetElement) {
   }
 
   //Add the manifest files that have been created to the preview
-  for (const manifestFileKey of Object.keys(sodaJSONObj["guided-manifest-files"])) {
+  for (const manifestFileKey of Object.keys(sodaJSONObj["manifest-files"])) {
     dsJsonObjCopy["folders"][manifestFileKey]["files"]["manifest.xlsx"] = {
       action: ["new"],
       path: "",
@@ -3760,6 +3760,9 @@ const openPage = async (targetPageID) => {
     }
 
     if (targetPageID === "guided-manifest-file-generation-tab") {
+      // temp remove console.log()
+      sodaJSONObj["manifest-files"] = {};
+
       // Note: manifest file auto-generation is handled by an event listener on the button
       // with the ID: guided-button-auto-generate-manifest-files
 
@@ -5667,10 +5670,10 @@ const patchPreviousGuidedModeVersions = () => {
   }
 
   const resetGuidedManifestFiles = () => {
-    sodaJSONObj["guided-manifest-files"] = {};
+    sodaJSONObj["manifest-files"] = {};
   };
 
-  //Update manifest files key from old key ("manifest-files") to new key ("guided-manifest-files")
+  //Update manifest files key from old key ("manifest-files") to new key ("manifest-files")
   if (sodaJSONObj["manifest-files"]) {
     resetGuidedManifestFiles();
     delete sodaJSONObj["manifest-files"];
@@ -5678,11 +5681,8 @@ const patchPreviousGuidedModeVersions = () => {
   }
 
   let oldManifestFileHeaders = false;
-  for (highLevelFolderManifestData in sodaJSONObj["guided-manifest-files"]) {
-    if (
-      sodaJSONObj["guided-manifest-files"][highLevelFolderManifestData]["headers"][0] ===
-      "File Name"
-    ) {
+  for (highLevelFolderManifestData in sodaJSONObj["manifest-files"]) {
+    if (sodaJSONObj["manifest-files"][highLevelFolderManifestData]["headers"][0] === "File Name") {
       oldManifestFileHeaders = true;
     }
   }
@@ -5897,7 +5897,7 @@ guidedCreateSodaJSONObj = () => {
   sodaJSONObj["dataset-structure"] = { files: {}, folders: {} };
   sodaJSONObj["generate-dataset"] = {};
   sodaJSONObj["generate-dataset"]["destination"] = "bf";
-  sodaJSONObj["guided-manifest-files"] = {};
+  sodaJSONObj["manifest-files"] = {};
   sodaJSONObj["starting-point"] = {};
   sodaJSONObj["dataset-metadata"] = {};
   sodaJSONObj["dataset-metadata"]["shared-metadata"] = {};
@@ -12040,7 +12040,7 @@ $(document).ready(async () => {
       // First, empty the guided_manifest_files so we can add the new manifest files
       fs.emptyDirSync(guidedManifestFilePath);
 
-      const guidedManifestData = sodaJSONObj["guided-manifest-files"];
+      const guidedManifestData = sodaJSONObj["manifest-files"];
 
       for (const [highLevelFolder, manifestData] of Object.entries(guidedManifestData)) {
         let manifestJSON = processManifestInfo(
