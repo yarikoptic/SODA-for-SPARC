@@ -5776,7 +5776,7 @@ const guidedResumeProgress = async (resumeProgressButton) => {
       JSON.stringify(intitiallyPulledDatasetStructure)
     ) {
       await Swal.fire({
-        icon: "error  ",
+        icon: "error",
         title: "Dataset structure on Pennsieve has changed",
         html: `
           The dataset structure on Pennsieve has changed since you started editing this dataset.
