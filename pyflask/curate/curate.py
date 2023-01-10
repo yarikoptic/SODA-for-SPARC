@@ -2457,7 +2457,7 @@ def bf_generate_new_dataset(soda_json_structure, ps, ds):
                     
 
                 # check if the upload has finished
-                if files_uploaded == current_files_in_subscriber_session :
+                if files_uploaded == current_files_in_subscriber_session:
                     print("Finished")
                     namespace_logger.info("Upload complete")
                     # unsubscribe from the agent's upload messages since the upload has finished
@@ -2706,6 +2706,7 @@ def bf_generate_new_dataset(soda_json_structure, ps, ds):
             ps.subscribe(10, False, monitor_subscriber_progress)
 
 
+        namespace_logger.info("Finished uploading metadata files")
         # 7. Upload manifest files
         if list_upload_manifest_files:
             namespace_logger.info("bf_generate_new_dataset (optional) step 7 upload manifest files")
@@ -2725,25 +2726,25 @@ def bf_generate_new_dataset(soda_json_structure, ps, ds):
             manifest_data = ps.manifest.create(list_upload_manifest_files[0][0][0], ps_folder)
             manifest_id = manifest_data.manifest_id
 
-            total_manifest_files += 1
-
             loc = get_agent_installation_location()
 
             if len(list_upload_manifest_files) > 1:
                 for item in list_upload_manifest_files[1:]:
+                    namespace_logger.info(item)
                     manifest_file = item[0][0]
                     ps_folder = item[1]
-                    main_curate_progress_message = ( f"Uploading manifest file in {ps_folder['content']['name']} folder" )
+                    main_curate_progress_message = ( f"Uploading manifest file in {ps_folder} folder" )
                     print("Before failure on manifest adding")
                     
                     # add the files to the manifest
                     # subprocess call to the pennsieve agent to add the files to the manifest
-                    subprocess.run([f"{loc}", "manifest", "add", str(manifest_id), manifest_file, "-t", f"/{ps_folder['content']['name']}"])
-
+                    subprocess.run([f"{loc}", "manifest", "add", str(manifest_id), manifest_file, "-t", f"{ps_folder}"])
                 
             bytes_uploaded_per_file = {}
             current_files_in_subscriber_session = total_manifest_files
             files_uploaded = 0
+
+            namespace_logger.info(f"Uploading {total_manifest_files} manifest files to Pennsieve.")
 
             # upload the manifest 
             ps.manifest.upload(manifest_id)
@@ -2751,11 +2752,9 @@ def bf_generate_new_dataset(soda_json_structure, ps, ds):
             ps.subscribe(10, False, monitor_subscriber_progress)
 
 
-        # wait a few moments
-        time.sleep(500)
-
-        # # stop the agent so that we can remove the manifest files that have just been uploaded
-        stop_agent()
+        # before we can remove files we need to wait for all of the Agent's threads/subprocesses to finish
+        # elsewise we get an error that the file is in use and therefore cannot be deleted
+        time.sleep(1)
 
         shutil.rmtree(manifest_folder_path) if isdir(manifest_folder_path) else 0
 
