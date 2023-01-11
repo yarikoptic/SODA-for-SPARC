@@ -1956,6 +1956,7 @@ const ffmCreateManifest = async (sodaJson) => {
   try {
     // used for imported local datasets and pennsieve datasets
     // filters out deleted files/folders before creating manifest data again
+    console.log(sodaCopy["dataset-structure"]);
     const cleanJson = await client.post(
       `/curate_datasets/clean-dataset`,
       { soda_json_structure: sodaCopy },
@@ -1966,6 +1967,7 @@ const ffmCreateManifest = async (sodaJson) => {
     // response does not format in JSON format so need to format ' with "
     let regex = /'/gm;
     let formattedResponse = response.replace(regex, '"');
+    console.log(formattedResponse);
 
     let json_structure = JSON.parse(formattedResponse);
     sodaCopy = json_structure;
