@@ -5754,7 +5754,7 @@ const guidedResumeProgress = async (resumeProgressButton) => {
   }
 
   // If the dataset is being edited on Pensieve, check to make sure the folders and files are still the same.
-  if (datasetResumeJsonObj["starting-point"]?.["type"] === "pennsieve") {
+  if (datasetResumeJsonObj["starting-point"]?.["type"] === "bf") {
     const nofiication = notyf.open({
       type: "info",
       message: `Checking to make sure the dataset structure on Pennsieve is the same as when you started editing this dataset.`,
