@@ -148,15 +148,21 @@ const guidedSetNavLoadingState = (loadingState) => {
   //to disable the primary and sub buttons along with the nav menu
   const subBackButton = document.getElementById("guided-button-sub-page-back");
   const subContinueButton = document.getElementById("guided-button-sub-page-continue");
+  const subSaveAndExitButton = document.getElementById("guided-button-sub-page-save-and-exit");
+
   const mainBackButton = document.getElementById("guided-back-button");
   const mainContinueButton = document.getElementById("guided-next-button");
+  const saveAndExitButton = document.getElementById("guided-button-save-and-exit");
+
   const navItems = document.querySelectorAll(".guided--nav-bar-section-page");
 
   if (loadingState === true) {
     subBackButton.disabled = true;
     subContinueButton.disabled = true;
+    subSaveAndExitButton.disabled = true;
     mainBackButton.disabled = true;
     mainContinueButton.disabled = true;
+    saveAndExitButton.disabled = true;
     mainBackButton.classList.add("loading");
     mainContinueButton.classList.add("loading");
 
@@ -168,10 +174,12 @@ const guidedSetNavLoadingState = (loadingState) => {
   if (loadingState === false) {
     subBackButton.disabled = false;
     subContinueButton.disabled = false;
+    subSaveAndExitButton.disabled = false;
     mainBackButton.disabled = false;
     mainContinueButton.disabled = false;
     mainBackButton.classList.remove("loading");
     mainContinueButton.classList.remove("loading");
+    saveAndExitButton.disabled = false;
 
     navItems.forEach((nav) => {
       nav.classList.remove("disabled-nav");
@@ -3793,6 +3801,7 @@ const openPage = async (targetPageID) => {
             },
           });
           let res = import_metadata.data;
+          console.log(res);
           const sparcAwardRes = res?.["SPARC Award number"];
 
           //If the SPARC Award number was found, click the manual button and fill the SPARC Award number

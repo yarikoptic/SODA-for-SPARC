@@ -39,11 +39,11 @@ def get_dataset_id(ps_or_token, selected_dataset):
             selected_dataset: Pennsieve dataset to get the ID for
     """
 
-    if type(ps_or_token) == str:
-        "If the dataset ID was provided instead of the name, return it."
-        if selected_dataset.startswith("N:dataset:"):
-            return selected_dataset
+    "If the dataset ID was provided instead of the name, return it."
+    if selected_dataset.startswith("N:dataset:"):
+        return selected_dataset
 
+    if type(ps_or_token) == str:
         r = requests.get("https://api.pennsieve.io/datasets", headers={"Authorization": f"Bearer {ps_or_token}"})
         r.raise_for_status()
 
