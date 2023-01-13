@@ -76,10 +76,10 @@ def update_existing_pennsieve_manifest_files(ps, soda_json_structure, high_level
                     manifest_df = pd.read_excel(
                         url, engine="openpyxl", usecols=column_check, header=0
                     )
-
                     filepath = join(
                         manifest_path, folder_name, "manifest.xlsx"
                     )
+
                     # print(filepath)
 
                     high_level_folders.remove(folder_name)
@@ -93,6 +93,23 @@ def update_existing_pennsieve_manifest_files(ps, soda_json_structure, high_level
 
                     new_manifest = pd.DataFrame.from_dict(updated_manifest_dict)
                     new_manifest.to_excel(filepath, index=False)
+                    wb = load_workbook(filepath)
+                    ws = wb.active
+                    blueFill = PatternFill(
+                        start_color="9DC3E6", fill_type="solid"
+                    )
+                    greenFill = PatternFill(
+                        start_color="A8D08D", fill_type="solid"
+                    )
+                    yellowFill = PatternFill(
+                        start_color="FFD965", fill_type="solid"
+                    )
+                    ws['A1'].fill = blueFill
+                    ws['B1'].fill = greenFill
+                    ws['C1'].fill = greenFill
+                    ws['D1'].fill = greenFill
+                    ws['E1'].fill = yellowFill
+                    wb.save(filepath)
 
                     manifest_progress["manifest_files_uploaded"] += 1
 
@@ -294,6 +311,23 @@ def create_high_level_manifest_files_existing_bf_starting_point(soda_json_struct
 
         df = pd.DataFrame.from_dict(dict_folder_manifest)
         df.to_excel(manifestfilepath, index=None, header=True)
+        wb = load_workbook(manifestfilepath)
+        ws = wb.active
+        blueFill = PatternFill(
+            start_color="9DC3E6", fill_type="solid"
+        )
+        greenFill = PatternFill(
+            start_color="A8D08D", fill_type="solid"
+        )
+        yellowFill = PatternFill(
+            start_color="FFD965", fill_type="solid"
+        )
+        ws['A1'].fill = blueFill
+        ws['B1'].fill = greenFill
+        ws['C1'].fill = greenFill
+        ws['D1'].fill = greenFill
+        ws['E1'].fill = yellowFill
+        wb.save(manifestfilepath)
 
         # update the progress of manifest file generation
         if manifest_progress != {}:

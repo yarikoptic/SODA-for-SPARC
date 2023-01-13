@@ -27,6 +27,8 @@ import pathlib
 from flask import abort
 import requests
 from datetime import datetime, timezone
+from openpyxl.styles import PatternFill, Font
+from openpyxl import load_workbook
 from permissions import bf_get_current_user_permission_agent_two
 from utils import authenticate_user_with_client, connect_pennsieve_client, get_dataset_id, create_request_headers, TZLOCAL
 from manifest import create_high_level_manifest_files_existing_bf_starting_point, create_high_level_manifest_files, get_auto_generated_manifest_files
@@ -431,6 +433,24 @@ def create_folder_level_manifest(jsonpath, jsondescription):
                 # Save manifest as Excel sheet
                 manifestfile = join(folderpath, "manifest.xlsx")
                 df.to_excel(manifestfile, index=None, header=True)
+                wb = load_workbook(manifestfile)
+                ws = wb.active
+                blueFill = PatternFill(
+                    start_color="9DC3E6", fill_type="solid"
+                )
+                greenFill = PatternFill(
+                    start_color="A8D08D", fill_type="solid"
+                )
+                yellowFill = PatternFill(
+                    start_color="FFD965", fill_type="solid"
+                )
+                ws['A1'].fill = blueFill
+                ws['B1'].fill = greenFill
+                ws['C1'].fill = greenFill
+                ws['D1'].fill = greenFill
+                ws['E1'].fill = yellowFill
+
+                wb.save(manifestfile)
                 total_dataset_size += path_size(manifestfile)
                 jsonpath[folder].append(manifestfile)
 
@@ -1528,6 +1548,23 @@ def create_high_level_manifest_files_existing_bf(
             manifestfilepath = join(folderpath, "manifest.xlsx")
             df = pd.DataFrame.from_dict(dict_folder_manifest)
             df.to_excel(manifestfilepath, index=None, header=True)
+            wb = load_workbook(manifestfilepath)
+            ws = wb.active
+            blueFill = PatternFill(
+                start_color="9DC3E6", fill_type="solid"
+            )
+            greenFill = PatternFill(
+                start_color="A8D08D", fill_type="solid"
+            )
+            yellowFill = PatternFill(
+                start_color="FFD965", fill_type="solid"
+            )
+            ws['A1'].fill = blueFill
+            ws['B1'].fill = greenFill
+            ws['C1'].fill = greenFill
+            ws['D1'].fill = greenFill
+            ws['E1'].fill = yellowFill
+            wb.save(manifestfilepath)
 
             manifest_files_structure[folder_key] = manifestfilepath
 

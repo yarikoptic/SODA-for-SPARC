@@ -1416,6 +1416,59 @@ function sendHTTPsRequestAirtable(options, varSuccess) {
   });
 }
 
+var awardObj = {};
+var globalSPARCAward = "";
+// indicate to user that airtable records are being retrieved
+const loadAwardData = async () => {
+  ///// Construct table from data
+  var awardResultArray = [];
+  let result = false;
+  ///// config and load live data from Airtable
+  var airKeyContent = parseJson(airtableConfigPath);
+  if (JSON.stringify(airKeyContent) !== "{}") {
+    var airKeyInput = airKeyContent["api-key"];
+    var airKeyName = airKeyContent["key-name"];
+    if (airKeyInput !== "" && airKeyName !== "") {
+      Airtable.configure({
+        endpointUrl: "https://" + airtableHostname,
+        apiKey: airKeyInput,
+      });
+      var base = Airtable.base("appiYd1Tz9Sv857GZ");
+      base("sparc_members")
+        .select({
+          view: "All members (ungrouped)",
+        })
+        .eachPage(
+          function page(records, fetchNextPage) {
+            records.forEach(function (record) {
+              if (record.get("Project_title") !== undefined) {
+                var awardNumber = (item = record.get("SPARC_Award_#"));
+                item = record.get("SPARC_Award_#").concat(" (", record.get("Project_title"), ")");
+                awardResultArray.push(item);
+                awardObj[awardNumber] = item;
+              }
+            }),
+              fetchNextPage();
+          },
+          function done(err) {
+            if (err) {
+              log.error(err);
+              console.log(err);
+              console.log("error here");
+              return;
+            } else {
+              // create set to remove duplicates
+              var awardSet = new Set(awardResultArray);
+              var resultArray = [...awardSet];
+              result = true;
+            }
+          }
+        );
+      return result;
+    }
+  }
+};
+
 loadAwardData();
 
 /////////////////////// Download Metadata Templates ////////////////////////////
@@ -2317,55 +2370,6 @@ function addOption(selectbox, text, value) {
   selectbox.options.add(opt);
 }
 
-var awardObj = {};
-var globalSPARCAward = "";
-// indicate to user that airtable records are being retrieved
-function loadAwardData() {
-  ///// Construct table from data
-  var awardResultArray = [];
-  ///// config and load live data from Airtable
-  var airKeyContent = parseJson(airtableConfigPath);
-  if (JSON.stringify(airKeyContent) !== "{}") {
-    var airKeyInput = airKeyContent["api-key"];
-    var airKeyName = airKeyContent["key-name"];
-    if (airKeyInput !== "" && airKeyName !== "") {
-      Airtable.configure({
-        endpointUrl: "https://" + airtableHostname,
-        apiKey: airKeyInput,
-      });
-      var base = Airtable.base("appiYd1Tz9Sv857GZ");
-      base("sparc_members")
-        .select({
-          view: "All members (ungrouped)",
-        })
-        .eachPage(
-          function page(records, fetchNextPage) {
-            records.forEach(function (record) {
-              if (record.get("Project_title") !== undefined) {
-                var awardNumber = (item = record.get("SPARC_Award_#"));
-                item = record.get("SPARC_Award_#").concat(" (", record.get("Project_title"), ")");
-                awardResultArray.push(item);
-                awardObj[awardNumber] = item;
-              }
-            }),
-              fetchNextPage();
-          },
-          function done(err) {
-            if (err) {
-              log.error(err);
-              console.log(err);
-              return;
-            } else {
-              // create set to remove duplicates
-              var awardSet = new Set(awardResultArray);
-              var resultArray = [...awardSet];
-            }
-          }
-        );
-    }
-  }
-}
-
 //////////////// Dataset description file ///////////////////////
 //////////////// //////////////// //////////////// ////////////////
 
@@ -3095,8 +3099,10 @@ const guidedCropOptions = {
   viewMode: 1,
   responsive: true,
   crop: function (event) {
+    console.log(event);
     var data = event.detail;
     let image_height = Math.round(data.height);
+    console.log(image_height);
 
     guidedFormBannerHeight.value = image_height;
 
@@ -3922,7 +3928,7 @@ async function updateBfAccountList() {
   refreshBfTeamsList(bfListTeams);
 }
 
-async function loadDefaultAccount() {
+const loadDefaultAccount = async () => {
   let responseObject;
 
   try {
@@ -3947,7 +3953,7 @@ async function loadDefaultAccount() {
     refreshBfUsersList();
     refreshBfTeamsList(bfListTeams);
   }
-}
+};
 
 const showPrePublishingPageElements = () => {
   var selectedBfAccount = defaultBfAccount;
@@ -4148,18 +4154,21 @@ organizeDSaddNewFolder.addEventListener("click", function (event) {
         popup: "animate__animated animate__fadeOutUp animate__faster",
       },
       didOpen: () => {
+        let swal_container = document.getElementsByClassName("swal2-popup")[0];
+        swal_container.style.width = "600px";
+        swal_container.style.padding = "1.5rem";
         $(".swal2-input").attr("id", "add-new-folder-input");
         $(".swal2-confirm").attr("id", "add-new-folder-button");
         $("#add-new-folder-input").keyup(function () {
           var val = $("#add-new-folder-input").val();
-          for (var char of nonAllowedCharacters) {
-            if (val.includes(char)) {
-              Swal.showValidationMessage(
-                `The folder name cannot contains the following characters ${nonAllowedCharacters}, please enter a different name!`
-              );
-              $("#add-new-folder-button").attr("disabled", true);
-              return;
-            }
+          let folderNameCheck = checkIrregularNameBoolean(val);
+          if (folderNameCheck === true) {
+            Swal.showValidationMessage(
+              `The folder name contains non-allowed characters. To follow the SPARC Data Standards, please create a folder name with only alphanumberic characters and hyphens '-'`
+            );
+            $("#add-new-folder-button").attr("disabled", true);
+            return;
+          } else {
             $("#add-new-folder-button").attr("disabled", false);
           }
         });
@@ -4342,15 +4351,6 @@ function hoverForFullName(ev) {
   // which we will put through the overflowing check in showFullName function
   showFullName(event, ev.children[1], fullPath);
 }
-
-// // If the document is clicked somewhere
-// document.addEventListener('onmouseover', function(e){
-//   if (e.target.classList.value !== "myFile") {
-//     hideFullPath()
-//   } else {
-//     hoverForPath(e)
-//   }
-// });
 
 document.addEventListener("onmouseover", function (e) {
   if (e.target.classList.value === "fas fa-folder") {
@@ -4681,7 +4681,7 @@ organizeDSaddFolders.addEventListener("click", function () {
 });
 
 ipcRenderer.on("selected-folders-organize-datasets", async (event, pathElement) => {
-  var footer = `<a style='text-decoration: none !important' class='swal-popover' data-content='A folder name cannot contain any of the following special characters: <br> ${nonAllowedCharacters}' rel='popover' data-html='true' data-placement='right' data-trigger='hover'>What characters are not allowed?</a>`;
+  // var footer = `<a style='text-decoration: none !important' class='swal-popover' data-content='A folder name cannot contain any of the following special characters: <br> ${nonAllowedCharacters}' rel='popover' data-html='true' data-placement='right' data-trigger='hover'>What characters are not allowed?</a>`;
   irregularFolderArray = [];
   var filtered = getGlobalPath(organizeDSglobalPath);
   var myPath = getRecursivePath(filtered.slice(1), datasetStructureJSONObj);
@@ -4691,7 +4691,7 @@ ipcRenderer.on("selected-folders-organize-datasets", async (event, pathElement) 
   if (irregularFolderArray.length > 0) {
     Swal.fire({
       title:
-        "The following folders contain non-allowed characters in their names. How should we handle them?",
+        "As per the SPARC Data Standards, folder names must contain only alphanumeric values 0-9, A-Z (no special characters, no empty spaces). The folders listed below don't comply with these guidlines. What would you like to do?",
       html:
         "<div style='max-height:300px; overflow-y:auto'>" +
         irregularFolderArray.join("</br>") +
@@ -4700,13 +4700,22 @@ ipcRenderer.on("selected-folders-organize-datasets", async (event, pathElement) 
       backdrop: "rgba(0,0,0, 0.4)",
       showDenyButton: true,
       showCancelButton: true,
-      confirmButtonText: "Replace characters with (-)",
-      denyButtonText: "Remove characters",
-      cancelButtonText: "Cancel",
+      confirmButtonText: "Replace forbidden characters with '-')",
+      denyButtonText: "Remove forbidden characters",
+      cancelButtonText: "Skip these folders",
       didOpen: () => {
         $(".swal-popover").popover();
+        let swalTitle = document.getElementById("swal-title");
+        swalTitle.style.textAlign = "justify";
+        let swalContainer = document.getElementsByClassName("swal2-popup")[0];
+        let swal_content = document.getElementsByClassName("swal2-content")[0];
+        let swalDenyButton = document.getElementsByClassName("swal2-deny")[0];
+        swalContainer.style.width = "600px";
+        // swalContainer.style.padding = "1.5rem";
+        swal_content.style.textAlign = "justify";
+        swalDenyButton.style.backgroundColor = "#086dd3";
       },
-      footer: footer,
+      // footer: footer,
     }).then(async (result) => {
       /* Read more about isConfirmed, isDenied below */
       if (result.isConfirmed) {
@@ -4987,13 +4996,13 @@ const addFoldersfunction = async (action, nonallowedFolderArray, folderArray, cu
 };
 
 //// Step 3. Organize dataset: Add files or folders with drag&drop
-function allowDrop(ev) {
+const allowDrop = (ev) => {
   ev.preventDefault();
-}
+};
 
 var filesElement;
 var targetElement;
-async function drop(ev) {
+const drop = async (ev) => {
   irregularFolderArray = [];
   let renamedFolderName = "";
   let replaced = [];
@@ -5151,7 +5160,7 @@ async function drop(ev) {
       // background.remove();
     });
   }
-}
+};
 
 const dropHelper = async (
   ev1,
@@ -5187,6 +5196,10 @@ const dropHelper = async (
   var duplicateFolders = [];
   var hiddenFiles = [];
   var nonAllowedFiles = [];
+  let tripleExtension = [];
+  let doubleExtension = [];
+  let loadingIcon = document.getElementById("items_loading_container");
+  let loadingContainer = document.getElementById("loading-items-background-overlay");
 
   for (var i = 0; i < ev1.length; i++) {
     /// Get all the file information
@@ -5203,28 +5216,47 @@ const dropHelper = async (
         break;
       }
     }
+    let slashCount = getPathSlashCount();
     /// check for File duplicate
     if (statsObj.isFile()) {
       var nonAllowedDuplicate = false;
       var originalFileName = path.parse(itemPath).base;
-      var slashCount = organizeDSglobalPath.value.trim().split("/").length - 1;
-      const fileNameRegex = /[^-a-zA-z0-9]/g;
+      let filePath = itemPath;
 
-      if (path.parse(itemPath).name.substr(0, 1) === ".") {
-        if (path.parse(itemPath).base === ".DS_Store") {
-          nonAllowedFiles.push(itemPath);
-          continue;
-        } else {
-          hiddenFiles.push(itemPath);
-          continue;
-        }
+      let forbiddenCheck = forbiddenFileCheck(filePath);
+      if (forbiddenCheck === "forbidden") {
+        nonAllowedFiles.push(filePath);
+        continue;
       }
-      if (path.parse(itemPath).base === "Thumbs.db") {
-        nonAllowedFiles.push(itemPath);
+      if (forbiddenCheck === "hidden") {
+        hiddenFiles.push(filePath);
+        continue;
+      }
+
+      let warningCharacterBool = warningCharacterCheck(filePath);
+      // let regex = /[\+&\%#]/i;
+      if (warningCharacterBool === true) {
+        nonAllowedCharacterFiles.push(filePath);
+        continue;
+      }
+
+      let extensionCount = checkForMultipleExtensions(filePath);
+      if (extensionCount > 2) {
+        //multiple extensions, raise warning (do not import)
+        tripleExtension.push(filePath);
+        continue;
+      }
+      if (extensionCount === 2) {
+        //double extension ask if compressed file
+        doubleExtension.push(filePath);
         continue;
       }
 
       if (slashCount === 1) {
+        if (loadingContainer != undefined) {
+          loadingContainer.style.display = "none";
+          loadingIcon.style.display = "none";
+        }
         await Swal.fire({
           icon: "error",
           html: "<p>This interface is only for including files in the SPARC folders. If you are trying to add SPARC metadata file(s), you can do so in the next Step.</p>",
@@ -5234,26 +5266,26 @@ const dropHelper = async (
         break;
       } else {
         if (JSON.stringify(myPath["files"]) === "{}" && JSON.stringify(importedFiles) === "{}") {
-          importedFiles[path.parse(itemPath).base] = {
-            path: itemPath,
-            basename: path.parse(itemPath).base,
+          importedFiles[originalFileName] = {
+            path: filePath,
+            basename: originalFileName,
           };
         } else {
           //check if fileName is in to-be-imported object keys
           if (importedFiles.hasOwnProperty(originalFileName)) {
             nonAllowedDuplicate = true;
-            nonAllowedDuplicateFiles.push(itemPath);
+            nonAllowedDuplicateFiles.push(filePath);
             continue;
           } else {
             //check if filename is in already-imported object keys
             if (myPath["files"].hasOwnProperty(originalFileName)) {
               nonAllowedDuplicate = true;
-              nonAllowedDuplicateFiles.push(itemPath);
+              nonAllowedDuplicateFiles.push(filePath);
               continue;
             } else {
               if (Object.keys(myPath["files"]).length === 0) {
                 importedFiles[originalFileName] = {
-                  path: itemPath,
+                  path: filePath,
                   basename: originalFileName,
                 };
               }
@@ -5261,14 +5293,14 @@ const dropHelper = async (
                 if (objectKey !== undefined) {
                   nonAllowedDuplicate = false;
                   //just checking if paths are the same
-                  if (itemPath === myPath["files"][objectKey]["path"]) {
-                    nonAllowedDuplicateFiles.push(itemPath);
+                  if (filePath === myPath["files"][objectKey]["path"]) {
+                    nonAllowedDuplicateFiles.push(filePath);
                     nonAllowedDuplicate = true;
                     continue;
                   } else {
                     //in neither so write
                     importedFiles[originalFileName] = {
-                      path: itemPath,
+                      path: filePath,
                       basename: originalFileName,
                     };
                   }
@@ -5280,7 +5312,12 @@ const dropHelper = async (
       }
     } else if (statsObj.isDirectory()) {
       /// drop a folder
+      let folderPath = itemPath;
       if (slashCount === 1) {
+        if (loadingContainer != undefined) {
+          loadingContainer.style.display = "none";
+          loadingIcon.style.display = "none";
+        }
         await Swal.fire({
           icon: "error",
           text: "Only SPARC folders can be added at this level. To add a new SPARC folder, please go back to Step 2.",
@@ -5292,7 +5329,7 @@ const dropHelper = async (
         var originalFolderName = itemName;
         var renamedFolderName = originalFolderName;
 
-        if (irregularFolderArray.includes(itemPath)) {
+        if (irregularFolderArray.includes(folderPath)) {
           if (action !== "ignore" && action !== "") {
             if (action === "remove") {
               renamedFolderName = removeIrregularFolders(itemName);
@@ -5300,7 +5337,7 @@ const dropHelper = async (
               renamedFolderName = replaceIrregularFolders(itemName);
             }
             importedFolders[renamedFolderName] = {
-              path: itemPath,
+              path: folderPath,
               "original-basename": originalFolderName,
             };
           }
@@ -5308,13 +5345,13 @@ const dropHelper = async (
           if (myPath["folders"].hasOwnProperty(originalFolderName) === true) {
             //folder is already imported
             duplicateFolders.push(itemName);
-            folderPath.push(itemPath);
+            folderPath.push(folderPath);
             continue;
           } else {
             if (importedFolders.hasOwnProperty(originalFolderName) === true) {
               //folder is already in to-be-imported list
               duplicateFolders.push(itemName);
-              folderPath.push(itemPath);
+              folderPath.push(folderPath);
               continue;
             } else {
               //folder is in neither so write
@@ -5329,21 +5366,163 @@ const dropHelper = async (
     }
   }
 
-  if (hiddenFiles.length > 0) {
+  if (doubleExtension.length > 0) {
+    if (loadingContainer != undefined) {
+      loadingContainer.style.display = "none";
+      loadingIcon.style.display = "none";
+    }
+
     await Swal.fire({
       title:
-        "The following files have an unexpected name starting with a period. How should we handle them?",
+        "The following files have a double period, which is only allowed if they are compressed files as per SPARC Data Standards. Do you confirm that these are all compressed files?",
       html:
-        "<div style='max-height:300px; overflow-y:auto'>" + hiddenFiles.join("</br>") + "</div>",
+        "<div style='max-height:300px; overflow-y:auto'>" +
+        doubleExtension.join("</br></br>") +
+        "</div>",
+      heightAuto: false,
+      backdrop: "rgba(0,0,0, 0.4)",
+      showDenyButton: false,
+      showCancelButton: true,
+      confirmButtonText: "Yes, import them",
+      // denyButtonText: "Import",
+      cancelButtonText: "No, skip them",
+      didOpen: () => {
+        $(".swal-popover").popover();
+        let swalContainer = document.getElementsByClassName("swal2-popup")[0];
+        let swal_content = document.getElementsByClassName("swal2-content")[0];
+        swalContainer.style.width = "600px";
+        swal_content.style.textAlign = "justify";
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        //remove slashes and place just file name in new array
+        for (let i = 0; i < doubleExtension.length; i++) {
+          if (
+            doubleExtension[i] in myPath["files"] ||
+            path.parse(doubleExtension[i]).base in Object.keys(importedFiles)
+          ) {
+            nonAllowedDuplicateFiles.push(doubleExtension[i]);
+            continue;
+          } else {
+            //not in there or regular files so store?
+            importedFiles[path.parse(doubleExtension[i]).base] = {
+              path: doubleExtension[i],
+              basename: path.parse(doubleExtension[i]).base,
+            };
+          }
+        }
+      }
+    });
+  }
+
+  if (tripleExtension.length > 0) {
+    if (loadingContainer != undefined) {
+      loadingContainer.style.display = "none";
+      loadingIcon.style.display = "none";
+    }
+    await Swal.fire({
+      title:
+        "Files should typically have one (two when they are compressed) periods in their names according to the SPARC Data Standards. The following files have three of more periods in their name and will not be imported.",
+      html:
+        "<div style='max-height:300px; overflow-y:auto'>" +
+        tripleExtension.join("</br></br>") +
+        "</div>",
+      heightAuto: false,
+      backdrop: "rgba(0,0,0, 0.4)",
+      showDenyButton: false,
+      showCancelButton: false,
+      confirmButtonText: "OK",
+      didOpen: () => {
+        $(".swal-popover").popover();
+        let swalContainer = document.getElementsByClassName("swal2-popup")[0];
+        let swal_content = document.getElementsByClassName("swal2-content")[0];
+        swalContainer.style.width = "600px";
+        swal_content.style.textAlign = "justify";
+      },
+    });
+  }
+
+  if (nonAllowedCharacterFiles.length > 0) {
+    if (loadingContainer != undefined) {
+      loadingContainer.style.display = "none";
+      loadingIcon.style.display = "none";
+    }
+    await Swal.fire({
+      title:
+        "The following files have characters (#&%+) that are typically not recommendeda as per the SPARC Data Standards. Although not forbidden to import as is, we recommend replacing those characters.",
+      html:
+        "<div style='max-height:300px; overflow-y:auto'>" +
+        nonAllowedCharacterFiles.join("</br></br>") +
+        "</div>",
       heightAuto: false,
       backdrop: "rgba(0,0,0, 0.4)",
       showDenyButton: true,
       showCancelButton: true,
-      confirmButtonText: "Remove characters",
-      denyButtonText: "Continue as is",
-      cancelButtonText: "Cancel",
+      confirmButtonText: "Replace characters with '-'",
+      denyButtonText: "Import as is",
+      cancelButtonText: "Skip All",
       didOpen: () => {
         $(".swal-popover").popover();
+        let swalContainer = document.getElementsByClassName("swal2-popup")[0];
+        let swal_content = document.getElementsByClassName("swal2-content")[0];
+        let swalDenyButton = document.getElementsByClassName("swal2-deny")[0];
+        swalContainer.style.width = "600px";
+        swal_content.style.textAlign = "justify";
+        swalDenyButton.style.backgroundColor = "#086dd3";
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        //replace characters
+        for (let i = 0; i < nonAllowedCharacterFiles.length; i++) {
+          let fileName = path.parse(nonAllowedCharacterFiles[i]).base;
+          // console.log(fileName);
+          let regex = /[\+&\%#]/g;
+          let replaceFile = fileName.replace(regex, "-");
+          console.log(replaceFile);
+          importedFiles[replaceFile] = {
+            path: nonAllowedCharacterFiles[i],
+            basename: replaceFile,
+          };
+        }
+      }
+      if (result.isDenied) {
+        for (let i = 0; i < nonAllowedCharacterFiles.length; i++) {
+          let fileName = nonAllowedCharacterFiles[i];
+          console.log(fileName);
+          importedFiles[fileName] = {
+            path: fileName,
+            basename: path.parse(fileName).base,
+          };
+        }
+      }
+    });
+  }
+
+  if (hiddenFiles.length > 0) {
+    if (loadingContainer != undefined) {
+      loadingContainer.style.display = "none";
+      loadingIcon.style.display = "none";
+    }
+    await Swal.fire({
+      title:
+        "The following files have an unexpected name starting with a period and are considered hidden files. As per SPARC Data Standards they are typically not recommended to be imported as hidden. How should we handle them?",
+      html:
+        "<div style='max-height:300px; overflow-y:auto'>" +
+        hiddenFiles.join("</br></br>") +
+        "</div>",
+      heightAuto: false,
+      backdrop: "rgba(0,0,0, 0.4)",
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: "Remove period",
+      denyButtonText: "Import as is",
+      cancelButtonText: "Skip All",
+      didOpen: () => {
+        $(".swal-popover").popover();
+        let swalContainer = document.getElementsByClassName("swal2-popup")[0];
+        let swal_content = document.getElementsByClassName("swal2-content")[0];
+        swalContainer.style.width = "600px";
+        swal_content.style.textAlign = "justify";
       },
     }).then(async (result) => {
       if (result.isConfirmed) {
@@ -5439,22 +5618,35 @@ const dropHelper = async (
   }
 
   if (nonAllowedFiles.length > 0) {
+    if (loadingContainer != undefined) {
+      loadingContainer.style.display = "none";
+      loadingIcon.style.display = "none";
+    }
     await Swal.fire({
-      title: "The following files are banned as per SPARC guidelines and will not be imported",
+      title:
+        "The following files are not allowed in datasets as per the SPARC Data Standards and will thus not be imported",
       html:
         "<div style='max-height:300px; overflow-y:auto'>" +
-        nonAllowedFiles.join("</br>") +
+        nonAllowedFiles.join("</br></br>") +
         "</div>",
       heightAuto: false,
       backdrop: "rgba(0,0,0, 0.4)",
       showConfirmButton: true,
-      confirmButtonText: "Okay",
+      confirmButtonText: "OK",
+      didOpen: () => {
+        let swalContainer = document.getElementsByClassName("swal2-popup")[0];
+        swalContainer.style.width = "600px";
+      },
     });
   }
 
   var listElements = showItemsAsListBootbox(duplicateFolders);
   var list = JSON.stringify(folderPath).replace(/"/g, "");
   if (duplicateFolders.length > 0) {
+    if (loadingContainer != undefined) {
+      loadingContainer.style.display = "none";
+      loadingIcon.style.display = "none";
+    }
     await Swal.fire({
       title: "Duplicate folder(s) detected",
       icon: "warning",
@@ -5500,6 +5692,10 @@ const dropHelper = async (
     }
     var listElements = showItemsAsListBootbox(baseName);
     var list = JSON.stringify(nonAllowedDuplicateFiles).replace(/"/g, "");
+    if (loadingContainer != undefined) {
+      loadingContainer.style.display = "none";
+      loadingIcon.style.display = "none";
+    }
     await Swal.fire({
       title: "Duplicate file(s) detected",
       icon: "warning",
@@ -5639,40 +5835,31 @@ function detectIrregularFolders(folderName, pathEle) {
   }
 }
 
-function checkIrregularNameBoolean(folderName) {
-  for (var char of nonAllowedCharacters) {
-    if (folderName.includes(char)) {
-      return true;
-    }
-  }
-  return false;
-}
+const checkIrregularNameBoolean = (folderName) => {
+  //nonAllowedCharacters modified to only allow a-z A-z 0-9 and hyphen "-"
+  const nonAllowedFolderCharacters = /[^a-zA-Z0-9-]/;
+  return nonAllowedFolderCharacters.test(folderName);
+};
 
 /* The following functions aim at ignore folders with irregular characters, or replace the characters with (-),
-   or remove the characters from the names.
-   All return an object in the form {"type": empty for now, will be confirmed once users click an option at the popup,
-                                     "paths": array of all the paths with special characters detected}
+  or remove the characters from the names.
+  All return an object in the form {"type": empty for now, will be confirmed once users click an option at the popup,
+  "paths": array of all the paths with special characters detected}
 */
 
 function replaceIrregularFolders(pathElement) {
-  var str = path.basename(pathElement);
-  for (var char of nonAllowedCharacters) {
-    if (str.includes(char)) {
-      str = str.replace(char, "-");
-    }
-  }
-  return str;
+  const reg = /[^a-zA-Z0-9-]/g;
+  const str = path.basename(pathElement);
+  const newFolderName = str.replace(reg, "-");
+  return newFolderName;
 }
 
-function removeIrregularFolders(pathElement) {
-  var str = path.basename(pathElement);
-  for (var char of nonAllowedCharacters) {
-    if (str.includes(char)) {
-      str = str.replace(char, "");
-    }
-  }
-  return str;
-}
+const removeIrregularFolders = (pathElement) => {
+  const reg = /[^a-zA-Z0-9-]/g;
+  const str = path.basename(pathElement);
+  const newFolderName = str.replace(reg, "");
+  return newFolderName;
+};
 
 // SAVE FILE ORG
 ipcRenderer.on("save-file-organization-dialog", (event) => {
@@ -5684,6 +5871,165 @@ ipcRenderer.on("save-file-organization-dialog", (event) => {
     event.sender.send("selected-saveorganizationfile", filename);
   });
 });
+
+// displays the user selected banner image using Jimp in the edit banner image modal
+//path: array
+//curationMode: string (guided-moded) (freeform)
+const handleSelectedBannerImage = async (path, curationMode) => {
+  let imgContainer = "";
+  let imgHolder = "";
+  let paraImagePath = "";
+  let viewImportedImage = "";
+  let saveBannerImage = "";
+  let cropperOptions = "";
+  console.log(curationMode);
+  if (curationMode === "guided-mode") {
+    imgHolder = document.getElementById("guided-div-img-container-holder");
+    imgContainer = document.getElementById("guided-div-img-container");
+    viewImportedImage = guidedBfViewImportedImage;
+    paraImagePath = "#guided-para-path-image";
+    saveBannerImage = "#guided-save-banner-image";
+    cropperOptions = guidedCropOptions;
+  }
+  if (curationMode === "freeform") {
+    cropperOptions = cropOptions;
+    paraImagePath = "#para-path-image";
+    saveBannerImage = "#save-banner-image";
+    viewImportedImage = bfViewImportedImage;
+    imgHolder = document.getElementById("div-img-container-holder");
+    imgContainer = document.getElementById("div-img-container");
+  }
+
+  if (path.length > 0) {
+    let original_image_path = path[0];
+    let image_path = original_image_path;
+    let destination_image_path = require("path").join(
+      homeDirectory,
+      "SODA",
+      "banner-image-conversion"
+    );
+    let converted_image_file = require("path").join(destination_image_path, "converted-tiff.jpg");
+    let conversion_success = true;
+    imageExtension = path[0].split(".").pop();
+
+    if (imageExtension.toLowerCase() == "tiff") {
+      Swal.fire({
+        title: "Image conversion in progress!",
+        html: "Pennsieve does not support .tiff banner images. Please wait while SODA converts your image to the appropriate format required.",
+        heightAuto: false,
+        backdrop: "rgba(0,0,0, 0.4)",
+        showClass: {
+          popup: "animate__animated animate__fadeInDown animate__faster",
+        },
+        hideClass: {
+          popup: "animate__animated animate__fadeOutUp animate__faster",
+        },
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      await Jimp.read(original_image_path)
+        .then(async (file) => {
+          if (!fs.existsSync(destination_image_path)) {
+            fs.mkdirSync(destination_image_path, { recursive: true });
+          }
+
+          try {
+            if (fs.existsSync(converted_image_file)) {
+              fs.unlinkSync(converted_image_file);
+            }
+          } catch (err) {
+            conversion_success = false;
+            console.error(err);
+          }
+
+          return file.write(converted_image_file, async () => {
+            if (fs.existsSync(converted_image_file)) {
+              let stats = fs.statSync(converted_image_file);
+              let fileSizeInBytes = stats.size;
+              let fileSizeInMegabytes = fileSizeInBytes / (1000 * 1000);
+
+              if (fileSizeInMegabytes > 5) {
+                fs.unlinkSync(converted_image_file);
+
+                await Jimp.read(original_image_path)
+                  .then((file) => {
+                    return file.resize(1024, 1024).write(converted_image_file, () => {
+                      imgHolder.style.display = "none";
+                      imgContainer.style.display = "block";
+
+                      $(paraImagePath).html(image_path);
+                      viewImportedImage.src = converted_image_file;
+                      myCropper.destroy();
+                      myCropper = new Cropper(viewImportedImage, cropperOptions);
+                      $(saveBannerImage).css("visibility", "visible");
+                      $("body").removeClass("waiting");
+                    });
+                  })
+                  .catch((err) => {
+                    conversion_success = false;
+                    console.error(err);
+                  });
+                if (fs.existsSync(converted_image_file)) {
+                  let stats = fs.statSync(converted_image_file);
+                  let fileSizeInBytes = stats.size;
+                  let fileSizeInMegabytes = fileSizeInBytes / (1000 * 1000);
+
+                  if (fileSizeInMegabytes > 5) {
+                    conversion_success = false;
+                    // SHOW ERROR
+                  }
+                }
+              }
+              image_path = converted_image_file;
+              imageExtension = "jpg";
+              $(paraImagePath).html(image_path);
+              viewImportedImage.src = image_path;
+              myCropper.destroy();
+              myCropper = new Cropper(viewImportedImage, cropperOptions);
+              $(paraImagePath).css("visibility", "visible");
+            }
+          });
+        })
+        .catch((err) => {
+          conversion_success = false;
+          console.error(err);
+          Swal.fire({
+            icon: "error",
+            text: "Something went wrong",
+            confirmButtonText: "OK",
+            heightAuto: false,
+            backdrop: "rgba(0,0,0, 0.4)",
+          });
+        });
+      if (conversion_success == false) {
+        $("body").removeClass("waiting");
+        return;
+      } else {
+        Swal.close();
+      }
+    } else {
+      imgHolder.style.display = "none";
+      imgContainer.style.display = "block";
+
+      $(paraImagePath).html(image_path);
+      viewImportedImage.src = image_path;
+      myCropper.destroy();
+      myCropper = new Cropper(viewImportedImage, cropperOptions);
+
+      $(saveBannerImage).css("visibility", "visible");
+    }
+  } else {
+    if (curationMode == "freeform") {
+      if ($("#para-current-banner-img").text() === "None") {
+        $(saveBannerImage).css("visibility", "hidden");
+      } else {
+        $(saveBannerImage).css("visibility", "visible");
+      }
+    }
+  }
+};
 
 //////////////////////////////////////////////////////////////////////////////
 /////////////////// CONTEXT MENU OPTIONS FOR FOLDERS AND FILES ///////////////
@@ -6051,9 +6397,19 @@ function sortObjByKeys(object) {
 }
 
 const listItems = async (jsonObj, uiItem, amount_req, reset) => {
+  console.log(jsonObj);
+  console.log("listing items");
   //allow amount to choose how many elements to create
   //break elements into sets of 100
   const rootFolders = ["primary", "source", "derivative"];
+  const datasetPath = document.getElementById("guided-input-global-path");
+  const pathDisplay = document.getElementById("datasetPathDisplay");
+  const fileExplorerBackButton = document.getElementById("guided-button-back");
+  let hideSampleFolders = false;
+  let hideSubjectFolders = false;
+  let splitPath = datasetPath.value.split("/");
+  let fullPath = datasetPath.value;
+
   if (organizeDSglobalPath.id === "guided-input-global-path") {
     const splitPathCheck = (num, button) => {
       //based on the paths length we will determine if the back button should be disabled/hidden or not
@@ -6077,24 +6433,28 @@ const listItems = async (jsonObj, uiItem, amount_req, reset) => {
     let primarySubjectCapsule = document.getElementById(
       "guided-primary-subjects-organization-page-capsule"
     );
+    let primaryPoolCapsule = document.getElementById(
+      "guided-primary-pools-organization-page-capsule"
+    );
     let sourceSampleCapsule = document.getElementById(
       "guided-source-samples-organization-page-capsule"
     );
     let sourceSubjectCapsule = document.getElementById(
       "guided-source-subjects-organization-page-capsule"
     );
+    let sourcePoolCapsule = document.getElementById(
+      "guided-source-pools-organization-page-capsule"
+    );
+
     let derivativeSampleCapsule = document.getElementById(
       "guided-derivative-samples-organization-page-capsule"
     );
     let derivativeSubjectCapsule = document.getElementById(
       "guided-derivative-subjects-organization-page-capsule"
     );
-
-    let datasetPath = document.getElementById("guided-input-global-path");
-    let pathDisplay = document.getElementById("datasetPathDisplay");
-    let fileExplorerBackButton = document.getElementById("guided-button-back");
-    let splitPath = datasetPath.value.split("/");
-    let fullPath = datasetPath.value;
+    let derivativePoolCapsule = document.getElementById(
+      "guided-derivative-pools-organization-page-capsule"
+    );
 
     //remove my_dataset_folder and if any of the ROOT FOLDER names is included
     if (splitPath[0] === "My_dataset_folder") splitPath.shift();
@@ -6102,31 +6462,75 @@ const listItems = async (jsonObj, uiItem, amount_req, reset) => {
     //remove the last element in array is it is always ''
     splitPath.pop();
 
-    //get 2 last lvls of the folder path
     let trimmedPath = "";
     if (currentPageID.includes("primary")) {
       if (primarySampleCapsule.classList.contains("active")) {
-        splitPathCheck(2, fileExplorerBackButton);
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(3, fileExplorerBackButton);
+        } else {
+          splitPathCheck(2, fileExplorerBackButton);
+        }
       }
       if (primarySubjectCapsule.classList.contains("active")) {
-        splitPathCheck(1, fileExplorerBackButton);
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(2, fileExplorerBackButton);
+        } else {
+          splitPathCheck(1, fileExplorerBackButton);
+        }
+        hideSampleFolders = true;
+      }
+      if (primaryPoolCapsule.classList.contains("active")) {
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(1, fileExplorerBackButton);
+        }
+        hideSubjectFolders = true;
       }
     }
     if (currentPageID.includes("source")) {
       if (sourceSubjectCapsule.classList.contains("active")) {
-        splitPathCheck(1, fileExplorerBackButton);
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(2, fileExplorerBackButton);
+        } else {
+          splitPathCheck(1, fileExplorerBackButton);
+        }
+        hideSampleFolders = true;
       }
       if (sourceSampleCapsule.classList.contains("active")) {
-        splitPathCheck(2, fileExplorerBackButton);
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(3, fileExplorerBackButton);
+        } else {
+          splitPathCheck(2, fileExplorerBackButton);
+        }
+      }
+      if (sourcePoolCapsule.classList.contains("active")) {
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(1, fileExplorerBackButton);
+        }
+        hideSubjectFolders = true;
       }
     }
     if (currentPageID.includes("derivative")) {
       //check the active capsule
-      if (derivativeSampleCapsule.classList.contains("active")) {
-        splitPathCheck(2, fileExplorerBackButton);
-      }
       if (derivativeSubjectCapsule.classList.contains("active")) {
-        splitPathCheck(1, fileExplorerBackButton);
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(2, fileExplorerBackButton);
+        } else {
+          splitPathCheck(1, fileExplorerBackButton);
+        }
+        hideSampleFolders = true;
+      }
+      if (derivativeSampleCapsule.classList.contains("active")) {
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(3, fileExplorerBackButton);
+        } else {
+          splitPathCheck(2, fileExplorerBackButton);
+        }
+      }
+      if (derivativePoolCapsule.classList.contains("active")) {
+        if (splitPath[0].includes("pool-")) {
+          splitPathCheck(1, fileExplorerBackButton);
+        }
+        hideSubjectFolders = true;
       }
     }
     if (
@@ -6144,11 +6548,9 @@ const listItems = async (jsonObj, uiItem, amount_req, reset) => {
       trimmedPath += splitPath[i] + "/";
     }
 
+    //append path to tippy and display path to the file explorer
     pathDisplay.innerText = trimmedPath;
     pathDisplay._tippy.setContent(fullPath);
-
-    //get the path of the dataset when rendering
-    //with the path you can determine whether or not to disable the back button
   }
 
   var appendString = "";
@@ -6156,8 +6558,85 @@ const listItems = async (jsonObj, uiItem, amount_req, reset) => {
   let file_elements = [],
     folder_elements = [];
   let count = 0;
+
+  //start creating folder elements to be rendered
   if (Object.keys(sortedObj["folders"]).length > 0) {
     for (var item in sortedObj["folders"]) {
+      //hide samples when on the subjects page
+      if (hideSampleFolders) {
+        let currentSampleFolder = splitPath[0];
+        let allSamples = sodaJSONObj.getAllSamplesFromSubjects();
+        let noPoolSamples = [];
+        let poolSamples = [];
+        let skipSubjectFolder = false;
+        if (allSamples.length > 1) {
+          //subjects within pools and others not
+          poolSamples = allSamples[0];
+          noPoolSamples = allSamples[1];
+          for (let i = 0; i < poolSamples.length; i++) {
+            if (item === poolSamples[i]["sampleName"]) {
+              skipSubjectFolder = true;
+              break;
+            }
+          }
+          if (skipSubjectFolder) continue;
+          for (let i = 0; i < noPoolSamples.length; i++) {
+            if (item === noPoolSamples[i]["sampleName"]) {
+              skipSubjectFolder = true;
+              break;
+            }
+          }
+          if (skipSubjectFolder) continue;
+        }
+        if (allSamples.length === 1) {
+          poolSamples = allSamples[1];
+          for (let i = 0; i < poolSamples.length; i++) {
+            if (item === poolSamples[i]["sampleName"]) {
+              skipSubjectFolder = true;
+              break;
+            }
+          }
+          if (skipSubjectFolder) continue;
+        }
+      }
+      if (hideSubjectFolders) {
+        //hide subject folders when displaying pool page
+        const currentPoolName = splitPath[0];
+        let currentSubjects = sodaJSONObj.getAllSubjects();
+        let poolSubjects = [];
+        let noPoolSubjects = [];
+        let skipSubjectFolder = false;
+        if (currentSubjects.length === 1) {
+          poolSubjects = currentSubjects[0];
+          for (let i = 0; i < poolSubjects.length; i++) {
+            if (item === poolSubjects[i]["subjectName"]) {
+              skipSubjectFolder = true;
+              break;
+            }
+          }
+          if (skipSubjectFolder) continue;
+        }
+        if (currentSubjects.length > 1) {
+          //some subjects in pools and some not
+          poolSubjects = currentSubjects[0];
+          noPoolSubjects = currentSubjects[1];
+          for (let i = 0; i < noPoolSubjects.length; i++) {
+            if (item === noPoolSubjects[i]["subjectName"]) {
+              skipSubjectFolder = true;
+              break;
+            }
+          }
+          if (skipSubjectFolder) continue;
+          for (let i = 0; i < poolSubjects.length; i++) {
+            if (item === poolSubjects[i]["subjectName"]) {
+              skipSubjectFolder = true;
+              break;
+            }
+          }
+        }
+        if (skipSubjectFolder) continue;
+      }
+
       count += 1;
       var emptyFolder = "";
       if (!highLevelFolders.includes(item)) {
@@ -6213,9 +6692,9 @@ const listItems = async (jsonObj, uiItem, amount_req, reset) => {
           item +
           "</div></div>";
 
-        // folder_elements.push(elem_creation);
         appendString = appendString + elem_creation;
         if (count === 100) {
+          //every one hundred elements created we put it into one element within the array
           folder_elements.push(appendString);
           count = 0;
           appendString = "";
@@ -6231,9 +6710,9 @@ const listItems = async (jsonObj, uiItem, amount_req, reset) => {
           item +
           "</div></div>";
 
-        // folder_elements.push(element_creation);
         appendString = appendString + element_creation;
         if (count === 100) {
+          //every one hundred elements created we put it into one element within the array
           folder_elements.push(appendString);
           count = 0;
           appendString = "";
@@ -6242,6 +6721,7 @@ const listItems = async (jsonObj, uiItem, amount_req, reset) => {
       }
     }
     if (count < 100) {
+      //if items to be rendered is less than 100 we push whatever we have to the array element
       if (!folder_elements.includes(appendString) && appendString != "") {
         folder_elements.push(appendString);
         count = 0;
@@ -9187,6 +9667,10 @@ tippy("#datasetPathDisplay", {
   maxWidth: "100%",
 });
 
+const createSpreadSheetWindow = async (spreadsheet) => {
+  ipcRenderer.send("spreadsheet", spreadsheet);
+};
+
 // function that removes hidden class from js element by id and smooth scrolls to it
 const unHideAndSmoothScrollToElement = (id) => {
   elementToUnhideAndScrollTo = document.getElementById(id);
@@ -9210,74 +9694,58 @@ const smoothScrollToElement = (idOrElement) => {
   }
 };
 
+const createWorkbookStyle = (wb, color) => {
+  return wb.createStyle({
+    fill: {
+      type: "pattern",
+      patternType: "solid",
+      fgColor: color,
+    },
+    font: {
+      bold: true,
+      color: "#000000",
+      size: 12,
+      name: "Calibri",
+    },
+    border: {
+      left: {
+        style: "thin",
+        color: "#000000",
+      },
+      right: {
+        style: "thin",
+        color: "#000000",
+      },
+      top: {
+        style: "thin",
+        color: "#000000",
+      },
+      bottom: {
+        style: "thin",
+        color: "#000000",
+      },
+    },
+  });
+};
+
 const convertJSONToXlsx = (jsondata, excelfile) => {
   console.log(excelfile);
   console.log("creating new manifest files styled");
-  const requiredManifestHeaders = ["filename", "timestamp", "description", "file type"];
+  const requiredManifestHeaders = [
+    "filename",
+    "timestamp",
+    "description",
+    "file type",
+    "Additional Metadata",
+  ];
+  const blueHeader = ["filename", "File Name", "file name"];
+  const greenHeader = ["timestamp", "description", "file type"];
+  const yellowHeader = ["Additional Metadata"];
   const wb = new excel4node.Workbook();
-  // create wb style that makes the background red
-  const requiredHeaderStyle = wb.createStyle({
-    fill: {
-      type: "pattern",
-      patternType: "solid",
-      fgColor: "a8d08d",
-    },
-    font: {
-      bold: true,
-      color: "#000000",
-      size: 12,
-      name: "Calibri",
-    },
-    border: {
-      left: {
-        style: "thin",
-        color: "#000000",
-      },
-      right: {
-        style: "thin",
-        color: "#000000",
-      },
-      top: {
-        style: "thin",
-        color: "#000000",
-      },
-      bottom: {
-        style: "thin",
-        color: "#000000",
-      },
-    },
-  });
-  const optionalHeaderStyle = wb.createStyle({
-    fill: {
-      type: "pattern",
-      patternType: "solid",
-      fgColor: "ffd965",
-    },
-    font: {
-      bold: true,
-      color: "#000000",
-      size: 12,
-      name: "Calibri",
-    },
-    border: {
-      left: {
-        style: "thin",
-        color: "#000000",
-      },
-      right: {
-        style: "thin",
-        color: "#000000",
-      },
-      top: {
-        style: "thin",
-        color: "#000000",
-      },
-      bottom: {
-        style: "thin",
-        color: "#000000",
-      },
-    },
-  });
+  // create wb style that makes the background styling
+  const greenHeaderStyle = createWorkbookStyle(wb, "a8d08d");
+  const yellowHeaderStyle = createWorkbookStyle(wb, "ffd965");
+  const blueHeaderStyle = createWorkbookStyle(wb, "A0C2E6");
   const standardCellStyle = wb.createStyle({
     font: {
       bold: false,
@@ -9297,9 +9765,10 @@ const convertJSONToXlsx = (jsondata, excelfile) => {
   //Write Column Title in Excel file
   let headingColumnIndex = 1;
   headingColumnNames.forEach((heading) => {
-    let styleObject = requiredManifestHeaders.includes(heading)
-      ? requiredHeaderStyle
-      : optionalHeaderStyle;
+    let styleObject = yellowHeaderStyle;
+    if (blueHeader.includes(heading)) styleObject = blueHeaderStyle;
+    if (yellowHeader.includes(heading)) styleObject = yellowHeaderStyle;
+    if (greenHeader.includes(heading)) styleObject = greenHeaderStyle;
 
     ws.cell(1, headingColumnIndex++)
       .string(heading)
