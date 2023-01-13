@@ -2655,7 +2655,10 @@ def bf_generate_new_dataset(soda_json_structure, ps, ds):
         start_generate = 1
 
         # set the dataset 
-        ps.use_dataset(ds["content"]["id"])
+        print(ds["content"]["id"])
+        selected_dataset_id = ds["content"]["id"]
+        # print(selected_dataset_id)
+        ps.use_dataset(selected_dataset_id)
 
 
         namespace_logger.info("Uploading files now")
