@@ -1852,7 +1852,7 @@ const generateFFManifestEditCard = (highLevelFolderName) => {
           width: 280px !important;
           margin: 4px;
         "
-        onClick="ffOpenManifestEditSwal('${highLevelFolderName}')"
+        onClick="ffOpenManifestEdit('${highLevelFolderName}')"
       >
         Preview/Edit ${highLevelFolderName} manifest file
       </button>
@@ -1877,119 +1877,94 @@ const renderFFManifestCards = () => {
   smoothScrollToElement(manifestFilesCardsContainer);
 };
 
-const ffOpenManifestEditSwal = async (highlevelFolderName) => {
-  // Function for when user wants to edit the manifest cards
-  const existingManifestData = sodaCopy["manifest-files"]?.[highlevelFolderName];
+const ffmUpdateManifestJson = (highlevelFolderName, result) => {
+      //if additional metadata or description gets added for a file then add to json as well
+      sodaJSONObj["manifest-files"]["auto-generated"] = true;
+      const savedHeaders = result[0];
+      const savedData = result[1];
 
-  let manifestFileHeaders = existingManifestData["headers"];
-  let manifestFileData = existingManifestData["data"];
-
-  let ffManifestTable;
-
-  const readOnlyHeaders = ["filename", "file type", "timestamp", "file name"];
-
-  const { value: saveManifestFiles } = await Swal.fire({
-    title:
-      "<span style='font-size: 18px !important;'>Edit the manifest file below: </span> <br><span style='font-size: 13px; font-weight: 500'> Tip: Double click on a cell to edit it.<span>",
-    html: "<div id='ffm-div-manifest-edit'></div>",
-    allowEscapeKey: false,
-    allowOutsideClick: false,
-    showConfirmButton: true,
-    confirmButtonText: "Confirm",
-    showCancelButton: true,
-    width: "90%",
-    customClass: "swal-large",
-    heightAuto: false,
-    backdrop: "rgba(0,0,0, 0.4)",
-    didOpen: () => {
-      Swal.hideLoading();
-      const manifestSpreadsheetContainer = document.getElementById("ffm-div-manifest-edit");
-      guidedManifestTable = jspreadsheet(manifestSpreadsheetContainer, {
-        tableOverflow: true,
-        data: manifestFileData,
-        columns: manifestFileHeaders.map((header) => {
-          return {
-            readOnly: readOnlyHeaders.includes(header) ? true : false,
-            type: "text",
-            title: header,
-            width: 200,
-          };
-        }),
-      });
-    },
-  });
-
-  if (saveManifestFiles) {
-    //if additional metadata or description gets added for a file then add to json as well
-    sodaJSONObj["manifest-files"]["auto-generated"] = true;
-    const savedHeaders = guidedManifestTable.getHeaders().split(",");
-    const savedData = guidedManifestTable.getData();
-    let jsonManifest = {};
-    let localFolderPath = path.join(homeDirectory, "SODA", "manifest_files", highlevelFolderName);
-    let selectedManifestFilePath = path.join(localFolderPath, "manifest.xlsx");
-    if (!fs.existsSync(localFolderPath)) {
-      fs.mkdirSync(localFolderPath);
-      fs.closeSync(fs.openSync(selectedManifestFilePath, "w"));
-    }
-    jsonManifest = excelToJson({
-      sourceFile: selectedManifestFilePath,
-      columnToKey: {
-        "*": "{{columnHeader}}",
-      },
-    })["Sheet1"];
-
-    let sortedJSON = processManifestInfo(savedHeaders, savedData);
-    jsonManifest = JSON.stringify(sortedJSON);
-    convertJSONToXlsx(JSON.parse(jsonManifest), selectedManifestFilePath);
-    //Update the metadata in json object
-    for (let i = 0; i < savedData.length; i++) {
-      let fileName = savedData[i][0];
-      let cleanedFileName = "";
-      let fileNameSplit = fileName.split("/");
-      let description = savedData[i][2];
-      let additionalMetadata = savedData[i][4];
-      if (fileNameSplit[0] === "") {
-        //not in a subfolder
-        cleanedFileName = fileNameSplit[1];
-        sodaCopy["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
-          "description"
-        ] = description;
-        sodaJSONObj["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
-          "description"
-        ];
-        sodaCopy["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
-          "additional-metadata"
-        ] = additionalMetadata;
-        sodaJSONObj["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
-          "additional-metadata"
-        ] = additionalMetadata;
-      } else {
-        // is in a subfolder so search for it and update metadata
-        // need to add description and additional metadata to original sodaJSONObj
-        let folderDepthCopy = sodaCopy["dataset-structure"]["folders"][highlevelFolderName];
-        let folderDepthReal = sodaJSONObj["dataset-structure"]["folders"][highlevelFolderName];
-        for (let j = 0; j < fileNameSplit.length; j++) {
-          if (j === fileNameSplit.length - 1) {
-            folderDepthCopy["files"][fileNameSplit[j]]["description"] = description;
-            folderDepthReal["files"][fileNameSplit[j]]["description"] = description;
-            folderDepthCopy["files"][fileNameSplit[j]]["additional-metadata"] = additionalMetadata;
-            folderDepthReal["files"][fileNameSplit[j]]["additional-metadata"] = additionalMetadata;
-          } else {
-            folderDepthCopy = folderDepthCopy["folders"][fileNameSplit[j]];
-            folderDepthReal = folderDepthReal["folders"][fileNameSplit[j]];
+      let jsonManifest = {};
+      let localFolderPath = path.join(homeDirectory, "SODA", "manifest_files", highlevelFolderName);
+      let selectedManifestFilePath = path.join(localFolderPath, "manifest.xlsx");
+      if (!fs.existsSync(localFolderPath)) {
+        fs.mkdirSync(localFolderPath);
+        fs.closeSync(fs.openSync(selectedManifestFilePath, "w"));
+      }
+      jsonManifest = excelToJson({
+        sourceFile: selectedManifestFilePath,
+        columnToKey: {
+          "*": "{{columnHeader}}",
+        },
+      })["Sheet1"];
+  
+      let sortedJSON = processManifestInfo(savedHeaders, savedData);
+      jsonManifest = JSON.stringify(sortedJSON);
+      convertJSONToXlsx(JSON.parse(jsonManifest), selectedManifestFilePath);
+      //Update the metadata in json object
+      for (let i = 0; i < savedData.length; i++) {
+        let fileName = savedData[i][0];
+        let cleanedFileName = "";
+        let fileNameSplit = fileName.split("/");
+        let description = savedData[i][2];
+        let additionalMetadata = savedData[i][4];
+        if (fileNameSplit[0] === "") {
+          //not in a subfolder
+          cleanedFileName = fileNameSplit[1];
+          sodaCopy["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
+            "description"
+          ] = description;
+          sodaJSONObj["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
+            "description"
+          ];
+          sodaCopy["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
+            "additional-metadata"
+          ] = additionalMetadata;
+          sodaJSONObj["dataset-structure"]["folders"][highlevelFolderName]["files"][cleanedFileName][
+            "additional-metadata"
+          ] = additionalMetadata;
+        } else {
+          // is in a subfolder so search for it and update metadata
+          // need to add description and additional metadata to original sodaJSONObj
+          let folderDepthCopy = sodaCopy["dataset-structure"]["folders"][highlevelFolderName];
+          let folderDepthReal = sodaJSONObj["dataset-structure"]["folders"][highlevelFolderName];
+          for (let j = 0; j < fileNameSplit.length; j++) {
+            if (j === fileNameSplit.length - 1) {
+              folderDepthCopy["files"][fileNameSplit[j]]["description"] = description;
+              folderDepthReal["files"][fileNameSplit[j]]["description"] = description;
+              folderDepthCopy["files"][fileNameSplit[j]]["additional-metadata"] = additionalMetadata;
+              folderDepthReal["files"][fileNameSplit[j]]["additional-metadata"] = additionalMetadata;
+            } else {
+              folderDepthCopy = folderDepthCopy["folders"][fileNameSplit[j]];
+              folderDepthReal = folderDepthReal["folders"][fileNameSplit[j]];
+            }
           }
         }
       }
+  
+      sodaCopy["manifest-files"][highlevelFolderName] = {
+        headers: savedHeaders,
+        data: savedData,
+      };
+}
+
+const ffOpenManifestEdit = async (highLevelFolderName) => {
+  const existingManifestData = sodaCopy["manifest-files"][highLevelFolderName];
+
+  // send manifest data to main.js to then send to child window
+  ipcRenderer.invoke("spreadsheet", existingManifestData);
+
+  // upon receiving a reply of the spreadsheet, handle accordinly
+  ipcRenderer.on("spreadsheet-reply", async (event, result) => {
+    if(!result || result === "") {
+      ipcRenderer.removeAllListeners("spreadsheet-reply");
+    } else {
+      // spreadsheet reply contained results
+      await ffmUpdateManifestJson(highLevelFolderName, result);
+      ipcRenderer.removeAllListeners("spreadsheet-reply");
+      //Rerender the manifest cards
+      renderFFManifestCards();
     }
-
-    sodaCopy["manifest-files"][highlevelFolderName] = {
-      headers: savedHeaders,
-      data: savedData,
-    };
-  }
-
-  //Rerender the manifest cards
-  renderFFManifestCards();
+  })
 };
 
 // Function takes in original sodaJSONObj and creates a copy of it to modify to manifest edits
