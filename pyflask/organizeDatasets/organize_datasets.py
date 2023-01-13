@@ -1119,11 +1119,12 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
             if item_name in high_level_metadata_sparc:
                 create_soda_json_progress += 1
                 # is a metadata file
-                soda_json_structure["metadata-files"][item_name] = {
-                    "type": "bf",
-                    "action": ["existing"],
-                    "path": item_id,
-                }
+                if "metadata-files" in soda_json_structure.keys():
+                    soda_json_structure["metadata-files"][item_name] = {
+                        "type": "bf",
+                        "action": ["existing"],
+                        "path": item_id,
+                    }
 
 
     # manifest information is needed so it is looked for before the recursive calls are made

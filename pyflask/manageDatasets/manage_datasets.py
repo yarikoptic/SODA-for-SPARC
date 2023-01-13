@@ -48,7 +48,7 @@ from utils import (
 from authentication import get_access_token
 from users import get_user_information, update_config_account_name
 from permissions import has_edit_permissions, bf_get_current_user_permission_agent_two
-from configUtils import add_api_host_to_config
+from configUtils import add_api_host_to_config, lowercase_account_names
 from constants import PENNSIEVE_URL
 
 
@@ -236,32 +236,32 @@ def read_from_config(key):
     return None
 
 
-def get_access_token():
-    # get cognito config 
-    r = requests.get(f"{PENNSIEVE_URL}/authentication/cognito-config")
-    r.raise_for_status()
+# def get_access_token():
+#     # get cognito config 
+#     r = requests.get(f"{PENNSIEVE_URL}/authentication/cognito-config")
+#     r.raise_for_status()
 
-    cognito_app_client_id = r.json()["tokenPool"]["appClientId"]
-    cognito_region_name = r.json()["region"]
+#     cognito_app_client_id = r.json()["tokenPool"]["appClientId"]
+#     cognito_region_name = r.json()["region"]
 
-    cognito_idp_client = boto3.client(
-    "cognito-idp",
-    region_name=cognito_region_name,
-    aws_access_key_id="",
-    aws_secret_access_key="",
-    )
+#     cognito_idp_client = boto3.client(
+#     "cognito-idp",
+#     region_name=cognito_region_name,
+#     aws_access_key_id="",
+#     aws_secret_access_key="",
+#     )
             
-    login_response = cognito_idp_client.initiate_auth(
-    AuthFlow="USER_PASSWORD_AUTH",
-    AuthParameters={"USERNAME": read_from_config("api_token"), "PASSWORD": read_from_config("api_secret")},
-    ClientId=cognito_app_client_id,
-    )
+#     login_response = cognito_idp_client.initiate_auth(
+#     AuthFlow="USER_PASSWORD_AUTH",
+#     AuthParameters={"USERNAME": read_from_config("api_token"), "PASSWORD": read_from_config("api_secret")},
+#     ClientId=cognito_app_client_id,
+#     )
 
-    # write access token to a file
-    with open("access_token.txt", "w") as f:
-        f.write(login_response["AuthenticationResult"]["AccessToken"])
+#     # write access token to a file
+#     with open("access_token.txt", "w") as f:
+#         f.write(login_response["AuthenticationResult"]["AccessToken"])
         
-    return login_response["AuthenticationResult"]["AccessToken"]
+#     return login_response["AuthenticationResult"]["AccessToken"]
 
 def bf_add_account_username(keyname, key, secret):
     """
@@ -444,17 +444,25 @@ def bf_get_accounts():
 
     if SODA_SPARC_API_KEY in sections:
         add_api_host_to_config(config, SODA_SPARC_API_KEY, configpath)
+        lowercase_account_names(config, SODA_SPARC_API_KEY, configpath)
         with contextlib.suppress(Exception):
             get_access_token()
-            return SODA_SPARC_API_KEY
+            return SODA_SPARC_API_KEY.lower()
     elif "global" in sections:
+        print("Here global in sections")
         if "default_profile" in config["global"]:
             default_profile = config["global"]["default_profile"]
             if default_profile in sections:
+                print("default profile addressed")
                 add_api_host_to_config(config, default_profile, configpath)
-                with contextlib.suppress(Exception):
+                lowercase_account_names(config, default_profile, configpath)
+                try:
+                    print("Getting access token")
                     get_access_token()
-                    return default_profile
+                    print("Access token success")
+                    return default_profile.lower()
+                except Exception as e:
+                    print(e)
     else:
         for account in sections:
             if account != 'agent':
@@ -472,9 +480,14 @@ def bf_get_accounts():
                         with open(configpath, "w+") as configfile:
                             config.write(configfile)
 
-                        return account
+                        lowercase_account_names(config, account, configpath)
+                        
+                        return account.lower()
+    print("Returning empty string")
     namespace_logger.info("Returning empty string?")
     return ""
+
+
 
 
 
@@ -791,11 +804,11 @@ def bf_submit_dataset(accountname, bfdataset, pathdataset):
             total_bytes_to_upload = events_dict["upload_status"].total
             current_bytes_uploaded = events_dict["upload_status"].current
 
-            print(file_id)
-            print(total_bytes_to_upload)
-            print(current_bytes_uploaded)
+            namespace_logger.info(file_id)
+            namespace_logger.info(total_bytes_to_upload)
+            namespace_logger.info(current_bytes_uploaded)
 
-            print(events_dict)
+            # print(events_dict)
 
             
             # get the previous bytes uploaded for the given file id - use 0 if no bytes have been uploaded for this file id yet
@@ -807,14 +820,14 @@ def bf_submit_dataset(accountname, bfdataset, pathdataset):
             # calculate the additional amount of bytes that have just been uploaded for the given file id
             total_bytes_uploaded["value"] += current_bytes_uploaded - previous_bytes_uploaded
 
-            print(total_bytes_uploaded)
+            namespace_logger.info(total_bytes_uploaded)
 
             # check if the given file has finished uploading
-            if current_bytes_uploaded == total_bytes_to_upload:
+            if current_bytes_uploaded == total_bytes_to_upload and file_id != "":
                 print("File uploaded")
                 files_uploaded += 1
                 # main_curation_uploaded_files += 1
-                # namespace_logger.info("Files Uploaded: " + str(files_uploaded) + "/" + str(total_dataset_files))
+                namespace_logger.info("Files Uploaded: " + str(files_uploaded) + "/" + str(total_dataset_files))
                 # namespace_logger.info("Total Bytes
 
             # check if the upload has finished
@@ -882,7 +895,7 @@ def bf_submit_dataset(accountname, bfdataset, pathdataset):
 
     # select the dataset 
     try:
-        ps.use_dataset(selected_dataset_id)
+        ps.use_dataset(bfdataset)
         namespace_logger.info("Used the dataset")
     except Exception as e:
         print("FAASFSF")
@@ -895,6 +908,8 @@ def bf_submit_dataset(accountname, bfdataset, pathdataset):
 
     # get the dataset size before starting the upload
     total_file_size, invalid_dataset_messages, total_files_to_upload = get_dataset_size(pathdataset)
+
+    namespace_logger.info(f"Size of the dataset: {total_file_size} bytes")
 
     if invalid_dataset_messages != "":
         submitdatastatus = "Done"
@@ -912,21 +927,10 @@ def bf_submit_dataset(accountname, bfdataset, pathdataset):
         did_upload = False
         abort(403, "You don't have permissions for uploading to this Pennsieve dataset")
 
-    print("Has permissions")
-
-    ## check if agent is installed
-    # try:
-    #     validate_agent_installation(Settings())
-    # except AgentError:
-    #     did_fail = True
-    #     did_upload = False
-    #     raise AgentError(
-    #         "The Pennsieve agent is not installed on your computer. Click <a href='https://docs.sodaforsparc.io/docs/common-errors/installing-the-pennsieve-agent' target='_blank'>here</a> for installation instructions."
-    #     )
 
     # create the manifest file for the dataset
     try:
-        manifest_data = ps.manifest.create(pathdataset)
+        manifest_data = ps.manifest.create(pathdataset, os.path.basename(pathdataset))
     except Exception as e:
         submitdatastatus = "Done"
         did_fail = True
@@ -940,7 +944,7 @@ def bf_submit_dataset(accountname, bfdataset, pathdataset):
     try:
         submitprintstatus = "Uploading"
         start_time_bf_upload = time.time()
-        initial_bfdataset_size_submit = bf_dataset_size(ps, selected_dataset_id)
+        # initial_bfdataset_size_submit = bf_dataset_size(ps, selected_dataset_id)
         start_submit = 1
         manifest_id = manifest_data.manifest_id
         ps.manifest.upload(manifest_id)

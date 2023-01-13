@@ -1455,6 +1455,8 @@ $("#edit_banner_image_button").click(async () => {
   if ($("#para-current-banner-img").text() === "None") {
     //Do nothing... regular import
   } else {
+    console.log(img_src);
+    console.log(img_base64);
     let img_src = $("#current-banner-img").attr("src");
     let img_base64 = await getBase64(img_src); // encode image to base64
 
@@ -1466,6 +1468,7 @@ $("#edit_banner_image_button").click(async () => {
 
     // Look for the security token in the URL. If this this doesn't exist, something went wrong with the aws bucket link.
     let position = img_src.search("X-Amz-Security-Token");
+    console.log(position);
 
     if (position != -1) {
       // The image url will be before the security token
@@ -1998,7 +2001,6 @@ const showCurrentBannerImage = async () => {
     } else {
       document.getElementById("para-current-banner-img").innerHTML = "";
       console.log(res);
-      console.log("updating banner image");
       bfCurrentBannerImg.src = res;
     }
     $("#banner_image_loader").hide();
