@@ -2,7 +2,7 @@
 # from gevent import monkey; monkey.patch_all(ssl=False)
 import requests
 import time 
-from sparcur.simple.validate import main as validate
+# from sparcur.simple.validate import main as validate
 from errorHandlers import handle_http_error
 from .validatorUtils import ( 
     parse, 

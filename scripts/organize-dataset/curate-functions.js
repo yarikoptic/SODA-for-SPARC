@@ -191,6 +191,9 @@ const dropHandler = async (
   if (ev.dataTransfer.items) {
     /// if users drag multiple files, only show first file
     var file = ev.dataTransfer.items[0];
+    // console.log(file);
+    console.log(ev);
+    // console.log()
     // If dropped items aren't files, reject them
     if (ev.dataTransfer.items[0].kind === "file") {
       var file = ev.dataTransfer.items[0].getAsFile();

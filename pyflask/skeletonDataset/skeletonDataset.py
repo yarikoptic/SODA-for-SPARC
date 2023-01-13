@@ -9,7 +9,7 @@ from posixpath import expanduser
 import shutil
 from xml.dom import InvalidStateErr
 from pathlib import Path
-from sparcur.simple.validate import main as validate
+# from sparcur.simple.validate import main as validate
 import copy
 from .skeletonDatasetUtils import import_bf_metadata_files_skeleton, import_manifest_files_skeleton
 from pennsieve2.pennsieve import Pennsieve
