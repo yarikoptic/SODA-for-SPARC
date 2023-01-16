@@ -1587,7 +1587,7 @@ function moveItemsHelper(item, destination, category) {
     ["Step 3", "Move", category === "files" ? "File" : "Folder"],
     determineDatasetLocation()
   );
-};
+}
 
 const updateManifestLabelColor = (el) => {
   document.getElementById("label-manifest").style.color = el.checked
