@@ -4,7 +4,9 @@ import sys
 from os.path import exists 
 import os
 
+from namespaces import NamespaceEnum, get_namespace_logger
 
+namespace_logger = get_namespace_logger(NamespaceEnum.STARTUP)
 
 
 def get_agent_installation_location():
@@ -30,6 +32,8 @@ def check_agent_installation():
     """
     Check if the Pennsieve agent is installed on the computer. 
     """
+    global namespace_logger
+    namespace_logger.info(get_agent_installation_location())
     return exists(get_agent_installation_location())
         
 
