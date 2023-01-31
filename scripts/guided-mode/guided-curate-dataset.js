@@ -306,8 +306,9 @@ const savePageChanges = async (pageBeingLeftID) => {
         } catch (error) {
           console.log(error);
           errorArray.push({
-            type: "notyf",
-            message: "Error pulling dataset folders and files from Pennsieve",
+            type: "swal",
+            title: "Error pulling dataset from Pennsieve",
+            message: `Error message: ${userErrorMessage(error)}`,
           });
           throw errorArray;
         }
@@ -318,20 +319,16 @@ const savePageChanges = async (pageBeingLeftID) => {
           guidedCheckHighLevelFoldersForImproperFiles(datasetStructureJSONObj);
 
         if (invalidFolders.length > 0 || invalidFiles.length > 0) {
-          if (invalidFolders.length > 0) {
-            errorArray.push({
-              type: "notyf",
-              message:
-                "Your primary, source, and derivative folders must only contain pool-folders or sub-folders when resuming a Pennsieve dataset",
-            });
-          }
-          if (invalidFiles.length > 0) {
-            errorArray.push({
-              type: "notyf",
-              message:
-                "Your primary, source, and derivative folders must be empty besides the pool-folders or sub-folders",
-            });
-          }
+          errorArray.push({
+            type: "swal",
+            title: "This dataset is not eligible to be edited via Guided Mode",
+            message: `
+              Your primary, source, and derivative folders must only contain pool-folders or sub-folders when resuming a Pennsieve dataset via Guided Mode
+              <br />
+              <br />
+              If you would like to edit your dataset folders and files, please use the organize dataset feature in Free Form Mode.
+            `,
+          });
           throw errorArray;
         }
 
@@ -386,9 +383,14 @@ const savePageChanges = async (pageBeingLeftID) => {
         const [subjectsInPools, subjectsOutsidePools] = sodaJSONObj.getAllSubjects();
         if (subjectsInPools.length === 0 && subjectsOutsidePools.length === 0) {
           errorArray.push({
-            type: "notyf",
-            message:
-              "Your dataset must have at least one subject to resume from Pennsieve using Guided Mode",
+            type: "swal",
+            title: "This dataset is not eligible to be edited via Guided Mode",
+            message: `
+              Your dataset must have at least one subject to resume from Pennsieve using Guided Mode
+              <br />
+              <br />
+              If you would like to edit your dataset folders and files, please use the organize dataset feature in Free Form Mode.
+            `,
           });
           throw errorArray;
         }
@@ -403,15 +405,21 @@ const savePageChanges = async (pageBeingLeftID) => {
 
           if (!objectsHaveSameKeys(metadataSubSamStructure, datasetSubSamStructure)) {
             errorArray.push({
-              type: "notyf",
-              message: "The subjects and samples metadata do not have the same keys",
+              type: "swal",
+              title: "This dataset is not eligible to be edited via Guided Mode",
+              message: `
+                Your dataset's structure does not align with your dataset's subject and sample metadata.
+                <br />
+                <br />
+                If you would like to edit your dataset folders and files, please use the organize dataset feature in Free Form Mode.
+              `,
             });
             throw errorArray;
           }
         } else {
+          // If the subjectsTableData or samplesTableData was not found, reset it and we'll add the metadata later
           subjectsTableData = [];
           samplesTableData = [];
-          extractPoolSubSamStructureFromDataset(datasetStructureJSONObj);
         }
         await Swal.fire({
           icon: "info",
@@ -1261,6 +1269,7 @@ const savePageChanges = async (pageBeingLeftID) => {
     }
   } catch (error) {
     guidedSetNavLoadingState(false);
+    console.log(error);
     throw error;
   }
 
@@ -5287,6 +5296,32 @@ const setActiveSubPage = (pageIdToActivate) => {
     //Load the black arrow lottie animation
     lottie.loadAnimation({
       container: sourcePoolsFileExplorerBlackArrowLottieContainer,
+      animationData: blackArrow,
+      renderer: "svg",
+      loop: true,
+      autoplay: true,
+    });
+  }
+
+  if (pageIdToActivate === "guided-derivative-subjects-organization-page") {
+    renderSubjectsHighLevelFolderAsideItems("derivative");
+    guidedUpdateFolderStructure("derivative", "subjects");
+    $("#guided-file-explorer-elements").appendTo(
+      $("#guided-derivative-subjects-file-explorer-container")
+    );
+    //Hide the file explorer and show the intro
+    document.getElementById("guided-file-explorer-elements").classList.add("hidden");
+    document
+      .getElementById("guided-derivative-subjects-file-explorer-intro")
+      .classList.remove("hidden");
+
+    //Load the black arrow lottie animation
+    const sourceSubjectsFileExplorerBlackArrowLottieContainer = document.getElementById(
+      "derivative-subjects-file-explorer-black-arrow-lottie-container"
+    );
+    sourceSubjectsFileExplorerBlackArrowLottieContainer.innerHTML = "";
+    lottie.loadAnimation({
+      container: sourceSubjectsFileExplorerBlackArrowLottieContainer,
       animationData: blackArrow,
       renderer: "svg",
       loop: true,
@@ -12687,6 +12722,20 @@ $(document).ready(async () => {
             duration: "7000",
             type: "error",
             message: error.message,
+          });
+        }
+
+        if (error.type === "swal") {
+          Swal.fire({
+            icon: "info",
+            title: error.title,
+            html: error.message,
+            width: 600,
+            heightAuto: false,
+            backdrop: "rgba(0,0,0, 0.4)",
+            confirmButtonText: `OK`,
+            focusConfirm: true,
+            allowOutsideClick: false,
           });
         }
       });
