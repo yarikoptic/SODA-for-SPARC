@@ -497,34 +497,6 @@ const savePageChanges = async (pageBeingLeftID) => {
       }
     }
 
-    if (pageBeingLeftID === "guided-source-folder-tab") {
-      if (
-        !$("#guided-button-has-source-data").hasClass("selected") &&
-        !$("#guided-button-no-source-data").hasClass("selected")
-      ) {
-        errorArray.push({
-          type: "notyf",
-          message: "Please indicate if your dataset contains source data",
-        });
-        throw errorArray;
-      }
-    }
-    if (pageBeingLeftID === "guided-derivative-folder-tab") {
-      if (
-        //check if divs with the buttons with IDs guided-button-has-derivative-data and guided-button-no-derivative-data have the class selected
-        !document
-          .getElementById("guided-button-has-derivative-data")
-          .classList.contains("selected") &&
-        !document.getElementById("guided-button-no-derivative-data").classList.contains("selected")
-      ) {
-        errorArray.push({
-          type: "notyf",
-          message: "Please indicate if your dataset contains derivative data",
-        });
-        throw errorArray;
-      }
-    }
-
     if (pageBeingLeftID === "guided-code-folder-tab") {
       const guidedButtonUserHasCodeData = document.getElementById("guided-button-has-code-data");
       const guidedButtonUserNoCodeData = document.getElementById("guided-button-no-code-data");
