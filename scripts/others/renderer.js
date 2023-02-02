@@ -321,7 +321,6 @@ const notyf = new Notyf({
   ],
 });
 
-let connected_to_internet = false;
 let update_available_notification = "";
 let update_downloaded_notification = "";
 
@@ -768,8 +767,6 @@ const check_internet_connection = async (show_notification = true) => {
       message: "Checking Internet status...",
     });
   }
-  await wait(800);
-
   return require("dns").resolve("www.google.com", async (err) => {
     if (err) {
       console.error("No internet connection");
@@ -782,8 +779,7 @@ const check_internet_connection = async (show_notification = true) => {
           message: "Not connected to internet",
         });
       }
-      connected_to_internet = false;
-      return connected_to_internet;
+      return false;
     } else {
       console.log("Connected to the internet");
       log.info("Connected to the internet");
@@ -794,8 +790,7 @@ const check_internet_connection = async (show_notification = true) => {
           message: "Connected to the internet",
         });
       }
-      connected_to_internet = true;
-      return connected_to_internet;
+      return true;
     }
   });
 };
