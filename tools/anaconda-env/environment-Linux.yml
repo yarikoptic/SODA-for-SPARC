@@ -1,4 +1,4 @@
-name: env-electron-python
+name: env-electron-python-analytics
 channels:
 - defaults
 - conda-forge
