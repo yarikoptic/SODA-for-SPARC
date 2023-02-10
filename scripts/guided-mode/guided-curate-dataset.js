@@ -1201,6 +1201,19 @@ const savePageChanges = async (pageBeingLeftID) => {
         sodaJSONObj["dataset-metadata"]["README"] = readMe;
       }
     }
+    if (pageBeingLeftID === "guided-create-changes-metadata-tab") {
+      const changesTextArea = document.getElementById("guided-textarea-create-changes");
+      if (changesTextArea.value.trim() === "") {
+        errorArray.push({
+          type: "notyf",
+          message: "Please enter a CHANGES for your dataset",
+        });
+        throw errorArray;
+      } else {
+        const changes = readMeTextArea.value.trim();
+        sodaJSONObj["dataset-metadata"]["CHANGES"] = changes;
+      }
+    }
   } catch (error) {
     guidedSetNavLoadingState(false);
     console.log(error);
