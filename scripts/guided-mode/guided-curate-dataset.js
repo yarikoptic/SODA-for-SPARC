@@ -7104,7 +7104,117 @@ const openGuidedEditContributorSwal = async (contibuttorOrcidToEdit) => {
     },
   });
 };
+const openAddContributorSwal = async () => {
+  const { value: contributorData } = await Swal.fire({
+    title: "Enter the contributor's information below.",
+    html: `
+      <div class="guided--flex-center mt-sm">
+        <label class="guided--form-label mt-md required">Contributor Name: </label>
+        <input
+          class="guided--input"
+          id="contributor-name"
+          type="text"
+          placeholder="Last, Middle First"
+          value=""
+        />
+        <p class="guided--text-input-instructions mb-0 text-left">
+          Enter the contributor's name in the format: Last, Middle First
+        </p>
+        <label class="guided--form-label mt-md required">Contributor's ORCID: </label>
+        <input
+          class="guided--input"
+          id="contributor-orcid"
+          type="text"
+          placeholder="https://orcid.org/0000-0000-0000-0000"
+          value=""
+        />
+        <p class="guided--text-input-instructions mb-0 text-left">
+          If your contributor does not have an ORCID, have the contributor
+          <a target="_blank" href="https://orcid.org">
+            sign up for one on orcid.org
+          </a>
+          .
+        </p>
+        <label class="guided--form-label mt-md required">Contributor Affiliation(s): </label>
+        <input id="contributor-affiliation-input"
+          contenteditable="true"
+        />
+        <p class="guided--text-input-instructions mb-0 text-left">
+          Institution(s) the contributor is affiliated with.
+          <br />
+          <b>
+            Press enter after entering an institution to add it to the list.
+          </b>
+        </p>
+        <label class="guided--form-label mt-md required">Contributor Role(s): </label>
+        <input id="contributor-roles-input"
+          contenteditable="true"
+        />
+        <p class="guided--text-input-instructions mb-0 text-left">
+          Role(s) the contributor played in the creation of the dataset.
+          <br />
+          <b>
+            Select a role from the dropdown to add it to the list.
+          </b>
+        </p>
+      </div>
+    `,
+    backdrop: "rgba(0,0,0, 0.4)",
+    width: "800px",
+    heightAuto: false,
+    showCancelButton: true,
+    confirmButtonText: "Add contributor",
+    confirmButtonColor: "#3085d6 !important",
+    focusConfirm: true,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    willOpen: () => {
+      //Create Affiliation(s) tagify for each contributor
+      const contributorAffiliationInput = document.getElementById("contributor-affiliation-input");
+      affiliationTagify = new Tagify(contributorAffiliationInput, {
+        duplicate: false,
+      });
+      createDragSort(affiliationTagify);
 
+      const contributorRolesInput = document.getElementById("contributor-roles-input");
+      contributorRolesTagify = new Tagify(contributorRolesInput, {
+        whitelist: [
+          "PrincipleInvestigator",
+          "Creator",
+          "CoInvestigator",
+          "DataCollector",
+          "DataCurator",
+          "DataManager",
+          "Distributor",
+          "Editor",
+          "Producer",
+          "ProjectLeader",
+          "ProjectManager",
+          "ProjectMember",
+          "RelatedPerson",
+          "Researcher",
+          "ResearchGroup",
+          "Sponsor",
+          "Supervisor",
+          "WorkPackageLeader",
+          "Other",
+        ],
+        enforceWhitelist: true,
+        dropdown: {
+          enabled: 0,
+          closeOnSelect: true,
+          position: "auto",
+        },
+      });
+      createDragSort(contributorRolesTagify);
+    },
+    preConfirm: () => {
+      const contributorName = document.getElementById("contributor-name").value;
+      console.log(contributorName);
+      swal.showValidationMessage("Please enter the contributor's name");
+    },
+  });
+};
 const openGuidedAddContributorSwal = async () => {
   contributorAdditionHeader = ``;
   addContributorTitle = "Enter the contributor's information below.";
