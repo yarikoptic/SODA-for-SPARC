@@ -1031,6 +1031,7 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                             )
                         temp_name += item_name
                     else:
+                        # Add a slash to the beginning of the file name if the file is in the root folder
                         temp_name = item_name
                     
                     if len(manifest.keys()) > 0:
@@ -1041,17 +1042,19 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                             "timestamp": "timestamp",
                             "description": "description",
                             "filetype": "file type",
-                            "additionalmetadata": "Additional Metadata",
+                            "additionalmetadata": "additional-metadata",
                         }
 
                         # Dictionary that will be used to store the correct manifest headers as keys
                         # and the values from the manifest as values
                         updated_manifest = {}
-
+                        namespace_logger.info("manifest keys")
+                        namespace_logger.info(manifest.keys())
                         # Go through the imported manifest keys and change the keys to the correct name
                         # For example if the key is "File Name" change it to "filename"
                         for manifestKey in manifest.keys():
-                            sterilizedKeyName = manifestKey.lower().replace(" ", "");
+                            # Make the key lowercase and remove spaces, dashes, and underscores
+                            sterilizedKeyName = manifestKey.lower().replace(" ", "").replace("-", "").replace("_", "")
                             if sterilizedKeyName in defaultManifestHeadersNameMapped.keys():
                                 # change the key to the correct name
                                 # For example if the key name is "filetype" change it to "file type"
@@ -1061,24 +1064,40 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                             else:
                                 # Keep the key/value the same and add it to the updated manifest
                                 updated_manifest[manifestKey] = manifest[manifestKey]
-                                
-                        # get the index of the file name in the manifest
-                        location_index = list(updated_manifest["filename"].values()).index(
-                            temp_name
-                        )
 
                         for manifestKey in updated_manifest.keys():
-                            # check if the key is is in the required manifest headers, if it is, update the item_name value
+                            namespace_logger.info("temp name")
+                            namespace_logger.info(temp_name)
+                            namespace_logger.info("values")
+                            namespace_logger.info(updated_manifest["filename"].values())
+                            # get the index of the file name in the manifest
+                            if (temp_name in updated_manifest["filename"].values()):
+                                location_index = list(updated_manifest["filename"].values()).index(
+                                    temp_name
+                                )
+                            elif ("/" + temp_name in updated_manifest["filename"].values()):
+                                namespace_logger.info("looking for file name with /")
+                                location_index = list(updated_manifest["filename"].values()).index(
+                                    "/" + temp_name
+                                )
+                            else:
+                                # break out of the for loop if the file name is not in the manifest
+                                namespace_logger.info("file name not in manifest")
+                                break
+
+                            # check if the key is in the required manifest headers, if it is, update the item_name value
                             # corresponding to the key
                             if manifestKey in defaultManifestHeadersNameMapped.values():
-                                subfolder_json["files"][item_name][manifestKey] = updated_manifest[manifestKey][location_index]
+                                if updated_manifest[manifestKey][location_index] != "":
+                                    subfolder_json["files"][item_name][manifestKey] = updated_manifest[manifestKey][location_index]
                             # if the key is not in the required manifest headers, add it to the extra columns item_name value
                             else :
+                                if updated_manifest[manifestKey][location_index] != "":
                                 # if the extra columns key does not exist, create it
-                                if "extra_columns" not in subfolder_json["files"][item_name]:
-                                    subfolder_json["files"][item_name]["extra_columns"] = {}
-                                # add the key/value to the extra columns key
-                                subfolder_json["files"][item_name]["extra_columns"][manifestKey] = updated_manifest[manifestKey][location_index]
+                                    if "extra_columns" not in subfolder_json["files"][item_name]:
+                                        subfolder_json["files"][item_name]["extra_columns"] = {}
+                                    subfolder_json["files"][item_name]["extra_columns"][manifestKey] = updated_manifest[manifestKey][location_index]
+
 
             else:  # another subfolder found
                 subfolder_json["folders"][item_name] = {
@@ -1092,8 +1111,6 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                 for paths in subfolder_json["bfpath"]:
                     subfolder_json["folders"][item_name]["bfpath"].append(paths)
                 subfolder_json["folders"][item_name]["bfpath"].append(item_name)
-
-                # go through recursive again through subfolder
 
         if len(subfolder_json["folders"].keys()) != 0:  # there are subfolders
             for folder in subfolder_json["folders"].keys():
