@@ -1053,8 +1053,8 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                         # Go through the imported manifest keys and change the keys to the correct name
                         # For example if the key is "File Name" change it to "filename"
                         for manifestKey in manifest.keys():
-                            # Make the key lowercase and remove spaces, dashes, and underscores
-                            sterilizedKeyName = manifestKey.lower().replace(" ", "").replace("-", "").replace("_", "")
+                            # Make the key lowercase
+                            sterilizedKeyName = manifestKey.lower()
                             if sterilizedKeyName in defaultManifestHeadersNameMapped.keys():
                                 # change the key to the correct name
                                 # For example if the key name is "filetype" change it to "file type"
