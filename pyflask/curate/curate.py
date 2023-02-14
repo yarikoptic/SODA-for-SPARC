@@ -3458,10 +3458,12 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
                 if "extra_columns" in folder["files"][item]:
                     for key in folder["files"][item]["extra_columns"]:
                         file_manifest_template_data.append(folder["files"][item]["extra_columns"][key])
-                        if key not in hlf_data_array[0]:
-                            namespace_logger.info("Adding extra column: " + key + " to manifest headers")
-                            namespace_logger.info(high_level_folder)
-                            hlf_data_array[0].append(key)
+                        if high_level_folder not in additional_manifest_headers:
+                            additional_manifest_headers[high_level_folder] = []
+                        if key not in additional_manifest_headers[high_level_folder]:
+                            additional_manifest_headers[high_level_folder].append(key)
+                            namespace_logger.info("Added additional header: " + key)
+
                 namespace_logger.info(high_level_folder)
                 namespace_logger.info("curr headers")
                 namespace_logger.info(hlf_data_array[0])
@@ -3478,6 +3480,11 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
 
     # Initialize the array that the manifest data will be added to.
     hlf_manifest_data = {}
+
+    # Initialize an object that will store additional manifest headers
+    # that are not part of the standard manifest
+    additional_manifest_headers = {}
+
     # any additional columns created by the user will be appended with the high level folder when found
     standard_manifest_columns = ["filename", "timestamp", "description", "file type", "Additional Metadata"]
 
@@ -3505,8 +3512,23 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
         namespace_logger.info(high_level_folder)
         namespace_logger.info(hlf_data_array[0])
         hlf_manifest_data[high_level_folder] = hlf_data_array
+    # For each key in hlf_manifest_data, if the key is in additional_manifest_headers, append the additional headers to the first row of the manifest
+    namespace_logger.info("additional headers")
+    namespace_logger.info(additional_manifest_headers)
     namespace_logger.info("hlf manifest data")
     namespace_logger.info(hlf_manifest_data)
+    namespace_logger.info(hlf_manifest_data['primary'][0])
+
+    for high_level_folder_with_additional_headers in additional_manifest_headers:
+        for additional_header in additional_manifest_headers[high_level_folder_with_additional_headers]:
+            namespace_logger.info("additional header")
+            namespace_logger.info(additional_header)
+            namespace_logger.info(high_level_folder_with_additional_headers)
+            hlf_manifest_data[high_level_folder_with_additional_headers][0].append(additional_header)
+    namespace_logger.info(hlf_manifest_data['primary'][0])
+    namespace_logger.info("hlf manifest data returned")
+    namespace_logger.info(hlf_manifest_data)
+            
     return hlf_manifest_data
 
 
