@@ -3518,7 +3518,16 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
         for additional_header in additional_manifest_headers[high_level_folder_with_additional_headers]:
             namespace_logger.info("Adding additional header to " + high_level_folder_with_additional_headers + " manifest")
             namespace_logger.info(additional_header)
-            hlf_manifest_data[high_level_folder_with_additional_headers][0].append(additional_header)
+            if high_level_folder_with_additional_headers in hlf_manifest_data.keys():
+                print(high_level_folder_with_additional_headers)
+                print("#" * 40)
+                print(hlf_manifest_data)
+                print(hlf_manifest_data[high_level_folder_with_additional_headers])
+                hlf_manifest_data[high_level_folder_with_additional_headers][0].append(additional_header)
+                print("PRIMARY BELOW")
+                print(hlf_manifest_data['primary'])
+                print('dafsdfff')
+                print(hlf_manifest_data['protocol'])
     namespace_logger.info("Primary manifest headers after adding additional headers")
     namespace_logger.info(hlf_manifest_data['primary'][0])
     namespace_logger.info("hlf manifest data returned")
