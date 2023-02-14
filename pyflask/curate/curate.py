@@ -3500,31 +3500,26 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
         namespace_logger.info(hlf_data_array[0])
 
         if "bfpath" in dataset_structure_obj["folders"][high_level_folder]:
-            namespace_logger.info("doing pennsieve recursive folder traversal")
             # means the json is from a pennsieve dataset
             pennsieve_recursive_folder_traversal(dataset_structure_obj["folders"][high_level_folder], hlf_data_array, relative_structure_path)
-            namespace_logger.info("hlf array after direct")
-            namespace_logger.info(high_level_folder)
-            namespace_logger.info(hlf_data_array[0])
         else:
             guided_recursive_folder_traversal(dataset_structure_obj["folders"][high_level_folder], hlf_data_array, relative_structure_path)
-        namespace_logger.info("hlf array after")
-        namespace_logger.info(high_level_folder)
-        namespace_logger.info(hlf_data_array[0])
+
         hlf_manifest_data[high_level_folder] = hlf_data_array
-    # For each key in hlf_manifest_data, if the key is in additional_manifest_headers, append the additional headers to the first row of the manifest
+    
     namespace_logger.info("additional headers")
     namespace_logger.info(additional_manifest_headers)
     namespace_logger.info("hlf manifest data")
     namespace_logger.info(hlf_manifest_data)
+    namespace_logger.info("Primary manifest headers before adding additional headers")
     namespace_logger.info(hlf_manifest_data['primary'][0])
 
     for high_level_folder_with_additional_headers in additional_manifest_headers:
         for additional_header in additional_manifest_headers[high_level_folder_with_additional_headers]:
-            namespace_logger.info("additional header")
+            namespace_logger.info("Adding additional header to " + high_level_folder_with_additional_headers + " manifest")
             namespace_logger.info(additional_header)
-            namespace_logger.info(high_level_folder_with_additional_headers)
             hlf_manifest_data[high_level_folder_with_additional_headers][0].append(additional_header)
+    namespace_logger.info("Primary manifest headers after adding additional headers")
     namespace_logger.info(hlf_manifest_data['primary'][0])
     namespace_logger.info("hlf manifest data returned")
     namespace_logger.info(hlf_manifest_data)
