@@ -1041,8 +1041,8 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                             "filename": "filename",
                             "timestamp": "timestamp",
                             "description": "description",
-                            "file type": "file type",
-                            "additional metadata": "additional-metadata",
+                            "filetype": "file type",
+                            "additionalmetadata": "additional-metadata",
                         }
 
                         # Dictionary that will be used to store the correct manifest headers as keys
@@ -1053,7 +1053,7 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                         # For example if the key is "File Name" change it to "filename"
                         for manifestKey in manifest.keys():
                             # Make the key lowercase
-                            sterilizedKeyName = manifestKey.lower()
+                            sterilizedKeyName = manifestKey.lower().replace(" ", "")
                             if sterilizedKeyName in defaultManifestHeadersNameMapped.keys():
                                 # change the key to the correct name
                                 # For example if the key name is "filetype" change it to "file type"
@@ -1070,8 +1070,9 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                                 location_index = list(updated_manifest["filename"].values()).index(
                                     temp_name
                                 )
+                            # This is for the case where the file name in the manifest has a slash at the beginning
+                            # which is the case for files in the root folder
                             elif ("/" + temp_name in updated_manifest["filename"].values()):
-                                namespace_logger.info("looking for file name with /")
                                 location_index = list(updated_manifest["filename"].values()).index(
                                     "/" + temp_name
                                 )
