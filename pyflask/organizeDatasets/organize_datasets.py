@@ -1041,15 +1041,14 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                             "filename": "filename",
                             "timestamp": "timestamp",
                             "description": "description",
-                            "filetype": "file type",
-                            "additionalmetadata": "additional-metadata",
+                            "file type": "file type",
+                            "additional metadata": "additional-metadata",
                         }
 
                         # Dictionary that will be used to store the correct manifest headers as keys
                         # and the values from the manifest as values
                         updated_manifest = {}
-                        namespace_logger.info("manifest keys")
-                        namespace_logger.info(manifest.keys())
+
                         # Go through the imported manifest keys and change the keys to the correct name
                         # For example if the key is "File Name" change it to "filename"
                         for manifestKey in manifest.keys():
@@ -1066,10 +1065,6 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                                 updated_manifest[manifestKey] = manifest[manifestKey]
 
                         for manifestKey in updated_manifest.keys():
-                            namespace_logger.info("temp name")
-                            namespace_logger.info(temp_name)
-                            namespace_logger.info("values")
-                            namespace_logger.info(updated_manifest["filename"].values())
                             # get the index of the file name in the manifest
                             if (temp_name in updated_manifest["filename"].values()):
                                 location_index = list(updated_manifest["filename"].values()).index(
@@ -1093,9 +1088,10 @@ def import_pennsieve_dataset(soda_json_structure, requested_sparc_only=True):
                             # if the key is not in the required manifest headers, add it to the extra columns item_name value
                             else :
                                 if updated_manifest[manifestKey][location_index] != "":
-                                # if the extra columns key does not exist, create it
+                                    # if the extra columns key does not exist, create it
                                     if "extra_columns" not in subfolder_json["files"][item_name]:
                                         subfolder_json["files"][item_name]["extra_columns"] = {}
+                                    # add the key/value to the extra columns
                                     subfolder_json["files"][item_name]["extra_columns"][manifestKey] = updated_manifest[manifestKey][location_index]
 
 

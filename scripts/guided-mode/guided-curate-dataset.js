@@ -303,6 +303,7 @@ const savePageChanges = async (pageBeingLeftID) => {
 
         try {
           let data = await bf_request_and_populate_dataset(sodaJSONObj, importProgressCircle, true);
+          console.log(data["soda_object"]);
           // Save a copy of the dataset structure used to make sure the user doesn't change it
           // on future progress continuations
           sodaJSONObj["initially-pulled-dataset-structure"] = JSON.parse(

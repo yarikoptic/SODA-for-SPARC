@@ -3409,9 +3409,10 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
                 if "extra_columns" in folder["files"][item]:
                     for key in folder["files"][item]["extra_columns"]:
                         file_manifest_template_data.append(folder["files"][item]["extra_columns"][key])
-                        if key not in standard_manifest_columns:
-                            # add column name to manifest column names array
-                            standard_manifest_columns.append(key)
+                        namespace_logger.info("extra column key: " + key)
+                        namespace_logger[high_level_folder]
+                        if key not in hlf_data_array[0]:
+                            hlf_data_array[0].append(key)
 
                 hlf_data_array.append(file_manifest_template_data)
 
@@ -3457,10 +3458,13 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
                 if "extra_columns" in folder["files"][item]:
                     for key in folder["files"][item]["extra_columns"]:
                         file_manifest_template_data.append(folder["files"][item]["extra_columns"][key])
-                        if key not in standard_manifest_columns:
-                            # add column name to manifest column names array
-                            standard_manifest_columns.append(key)
-
+                        if key not in hlf_data_array[0]:
+                            namespace_logger.info("Adding extra column: " + key + " to manifest headers")
+                            namespace_logger.info(high_level_folder)
+                            hlf_data_array[0].append(key)
+                namespace_logger.info(high_level_folder)
+                namespace_logger.info("curr headers")
+                namespace_logger.info(hlf_data_array[0])
                 hlf_data_array.append(file_manifest_template_data)
 
         if "folders" in folder.keys():
@@ -3485,14 +3489,24 @@ def guided_generate_manifest_file_data(dataset_structure_obj):
         # create an array to keep track of the path to the obj being recursed over
         relative_structure_path = []
         hlf_data_array.append(standard_manifest_columns)
+        namespace_logger.info("hlf array before")
+        namespace_logger.info(hlf_data_array[0])
 
         if "bfpath" in dataset_structure_obj["folders"][high_level_folder]:
+            namespace_logger.info("doing pennsieve recursive folder traversal")
             # means the json is from a pennsieve dataset
             pennsieve_recursive_folder_traversal(dataset_structure_obj["folders"][high_level_folder], hlf_data_array, relative_structure_path)
+            namespace_logger.info("hlf array after direct")
+            namespace_logger.info(high_level_folder)
+            namespace_logger.info(hlf_data_array[0])
         else:
             guided_recursive_folder_traversal(dataset_structure_obj["folders"][high_level_folder], hlf_data_array, relative_structure_path)
+        namespace_logger.info("hlf array after")
+        namespace_logger.info(high_level_folder)
+        namespace_logger.info(hlf_data_array[0])
         hlf_manifest_data[high_level_folder] = hlf_data_array
-
+    namespace_logger.info("hlf manifest data")
+    namespace_logger.info(hlf_manifest_data)
     return hlf_manifest_data
 
 

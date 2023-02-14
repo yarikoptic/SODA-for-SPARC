@@ -2031,10 +2031,17 @@ const ffmCreateManifest = async (sodaJson) => {
     // loop through each of the high level folders and create excel sheet in case no edits are made
     // will be auto generated and ready for upload
     const manifestRes = res.data;
+    console.log(manifestRes);
     let newManifestData = {};
     for (const [highLevelFolderName, manifestFileData] of Object.entries(manifestRes)) {
+      console.log(highLevelFolderName);
       if (manifestFileData.length > 1) {
+        for (const manifestData of manifestFileData) {
+          console.log(manifestData);
+        }
+        console.log(manifestFileData);
         const manifestHeader = manifestFileData.shift();
+        console.log(manifestHeader);
         newManifestData[highLevelFolderName] = {
           headers: manifestHeader,
           data: manifestFileData,
